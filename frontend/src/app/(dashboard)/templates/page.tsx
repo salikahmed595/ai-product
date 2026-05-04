@@ -1,3 +1,5 @@
+"use client";
+
 import { Sparkles, ArrowRight, User } from "lucide-react";
 
 export default function Templates() {
@@ -31,6 +33,11 @@ export default function Templates() {
 }
 
 function TemplateCard({ name, description, tags, recommended = false }: any) {
+  const handleUseTemplate = () => {
+    // Navigate to the agent builder, passing the template name as a query param
+    window.location.href = `/agents/default?template=${encodeURIComponent(name)}`;
+  };
+
   return (
     <div className={`bg-surface p-6 rounded-2xl border flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow relative ${
       recommended ? 'border-primary shadow-primary/10' : 'border-border'
@@ -54,9 +61,12 @@ function TemplateCard({ name, description, tags, recommended = false }: any) {
           </span>
         ))}
       </div>
-      <button className={`mt-4 w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
-        recommended ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted text-foreground hover:bg-muted/80 border border-border'
-      }`}>
+      <button 
+        onClick={handleUseTemplate}
+        className={`mt-4 w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+          recommended ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-muted text-foreground hover:bg-muted/80 border border-border'
+        }`}
+      >
         Use Template <ArrowRight size={16} />
       </button>
     </div>

@@ -26,6 +26,8 @@ export default async function (server: FastifyInstance) {
         operating_days: body.operatingDays,
         working_hours: body.workingHours,
         slot_duration: 30,
+        system_prompt: body.system_prompt || null,
+        voice_id: body.voice_id || null,
       };
 
       // Check if one exists

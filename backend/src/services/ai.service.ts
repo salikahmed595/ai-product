@@ -25,6 +25,7 @@ export interface ClinicContext {
   timezone: string;
   operating_days: string[];
   working_hours: string;
+  system_prompt?: string;
 }
 
 export async function getAIResponse(
@@ -38,11 +39,12 @@ export async function getAIResponse(
 
   try {
     const contextMsg = `Clinic: ${clinic.name} | Services: ${clinic.services.join(', ')} | Hours: ${clinic.working_hours} | Days: ${clinic.operating_days.join(', ')} | Timezone: ${clinic.timezone} | Slots: 30 min`;
+    const promptToUse = clinic.system_prompt || SYSTEM_PROMPT;
 
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: promptToUse },
         { role: 'system', content: contextMsg },
         ...history.slice(-6),
         { role: 'user', content: userMessage },

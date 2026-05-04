@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f9fc;
-  --foreground: #1e1e2d;
-  --primary: #4f46e5;
+  --background: #fafafb;
+  --foreground: #0f172a;
+  --primary: #000000; /* Apple/Retell often use stark black for primary buttons */
   --primary-foreground: #ffffff;
   --surface: #ffffff;
-  --surface-foreground: #1e1e2d;
+  --surface-foreground: #0f172a;
   --border: #e2e8f0;
-  --muted: #f1f5f9;
+  --muted: #f8fafc;
   --muted-foreground: #64748b;
   --sidebar: #ffffff;
 
@@ -24,7 +24,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-sidebar: var(--sidebar);
 
-  --font-sans: var(--font-geist-sans), sans-serif;
+  --font-sans: var(--font-inter), var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 
   --radius-xl: 1rem;
@@ -36,4 +36,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }

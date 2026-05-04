@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Users, UserCog, Home } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, Home, Bot } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Sidebar() {
@@ -10,8 +10,8 @@ export function Sidebar() {
   const links = [
     { href: "/", label: "Home", icon: <Home size={20} /> },
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
+    { href: "/agents", label: "Agents", icon: <Bot size={20} /> },
     { href: "/templates", label: "Templates", icon: <Users size={20} /> },
-    { href: "/agent-config", label: "Agent Config", icon: <UserCog size={20} /> },
   ];
 
   return (
