@@ -1,10 +1,8 @@
-
 # 🧠 SYSTEM ROLE
 
 You are an AI software architect and full-stack engineer responsible for building a **production-ready AI calling agent SaaS for aesthetic clinics**.
 
 You must:
-
 * design scalable backend systems
 * implement real-time voice handling
 * enforce strict business logic (appointments)
@@ -15,12 +13,12 @@ You must:
 
 # 🎯 PRODUCT GOAL
 
-Build a **multi-page SaaS platform** where:
+Build a **multi-page SaaS platform (Fully Managed)** where:
 
 1. Users sign up
 2. Create an AI clinic receptionist
-3. Connect phone number
-4. AI answers calls
+3. Platform provisions a Twilio phone number for the clinic
+4. AI answers calls using strict turn-based conversation (designed to support barge-in later)
 5. AI books appointments using fixed slot scheduling
 6. Dashboard shows analytics and bookings
 
@@ -41,7 +39,7 @@ Build a **multi-page SaaS platform** where:
 
 * Fixed slot duration = **30 minutes**
 * No arbitrary times allowed
-* Must prevent double booking
+* Must prevent double booking (MANDATORY Slot Hold System)
 
 ---
 
@@ -55,12 +53,11 @@ AI MUST NOT:
 
 ---
 
-## 4. Latency
+## 4. Latency & Interaction
 
 * AI response < 2 seconds
 * streaming required
-
----
+* Strict turn-based conversation for MVP (AI speaks → user speaks). Architecture must support adding barge-in later.
 
 ---
 
@@ -71,8 +68,10 @@ AI MUST NOT:
 ## Core Pipeline
 
 ```text
-Twilio → WebSocket → STT → LLM → Orchestrator → TTS → Twilio
+Twilio → WebSocket → STT (Deepgram) → LLM (Claude) → Orchestrator → TTS (ElevenLabs) → Twilio
 ```
+
+* **API Keys:** Platform-owned. Clinics do NOT provide their own keys. All keys (Twilio, Deepgram, Claude, ElevenLabs) are securely stored in the backend `.env`.
 
 ---
 
@@ -87,8 +86,6 @@ Twilio → WebSocket → STT → LLM → Orchestrator → TTS → Twilio
 
 ---
 
----
-
 ### 2. Agent Service
 
 Create and store clinic configuration:
@@ -97,13 +94,15 @@ Create and store clinic configuration:
 {
   "clinic_name": "string",
   "services": ["string"],
+  "timezone": "America/New_York",
+  "operating_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
   "working_hours": "10:00-18:00",
   "slot_duration": 30,
-  "phone_number": "string"
+  "twilio_number": "+1XXXX"
 }
 ```
 
----
+* *Note: Timezone and operating_days are critical to avoid booking errors.*
 
 ---
 
@@ -111,12 +110,10 @@ Create and store clinic configuration:
 
 Responsibilities:
 
-* Handle incoming call webhook
+* Handle incoming call webhook from Twilio
 * Open WebSocket stream
 * Route audio to AI pipeline
 * Maintain session
-
----
 
 ---
 
@@ -131,18 +128,15 @@ This must:
 
 ---
 
----
-
 ### 5. Booking Service
 
 Responsibilities:
 
 * generate time slots
 * check availability
+* create temporary slot holds
 * create bookings
 * sync with calendar
-
----
 
 ---
 
@@ -150,7 +144,17 @@ Responsibilities:
 
 Integrate with:
 
-* Google Calendar API
+* Google Calendar API via **Full OAuth Flow**
+* Users click "Connect Google Calendar", redirect to OAuth.
+* Securely store encrypted tokens in Supabase:
+
+```json
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "calendar_id": "primary"
+}
+```
 
 Functions:
 
@@ -158,8 +162,6 @@ Functions:
 checkAvailability(date, time)
 createEvent(bookingData)
 ```
-
----
 
 ---
 
@@ -179,8 +181,6 @@ Store:
 
 ---
 
----
-
 # ☎️ CALL FLOW IMPLEMENTATION
 
 ---
@@ -188,8 +188,8 @@ Store:
 ## Incoming Call Flow
 
 1. Receive webhook `/incoming-call`
-2. Identify clinic via phone number
-3. Load clinic configuration
+2. Identify clinic via `twilio_number`
+3. Load clinic configuration (including timezone)
 4. Start audio streaming
 5. Convert speech → text
 6. Send to LLM with context
@@ -199,8 +199,6 @@ Store:
 10. Convert to speech
 11. Send back to caller
 12. Store logs
-
----
 
 ---
 
@@ -234,11 +232,11 @@ STRICT RULES:
 ```text
 Clinic Name: {{clinic_name}}
 Services: {{services}}
+Timezone: {{timezone}}
+Operating Days: {{operating_days}}
 Working Hours: {{hours}}
 Slot Duration: 30 minutes
 ```
-
----
 
 ---
 
@@ -249,7 +247,7 @@ Slot Duration: 30 minutes
 ## Slot Rules
 
 * Slots are generated in 30-minute intervals
-* Only valid slots allowed
+* Only valid slots allowed, respecting `timezone` and `operating_days`
 
 ---
 
@@ -271,15 +269,11 @@ function generateSlots(start, end, duration = 30) {
 
 ---
 
----
-
 ## Availability Check
 
 ```text
-availableSlots = allSlots - calendarEvents
+availableSlots = allSlots - calendarEvents - pendingHolds
 ```
-
----
 
 ---
 
@@ -287,21 +281,26 @@ availableSlots = allSlots - calendarEvents
 
 1. Convert user input → nearest valid slot
 2. Check availability
-3. Confirm with user
+3. Confirm with user (Create Temporary Slot Hold)
 4. Re-check availability
-5. Create booking
+5. Create booking (Remove Hold)
 
 ---
 
----
+## Double Booking Prevention (MANDATORY Slot Hold System)
 
-## Double Booking Prevention
-
-* Always re-check before confirmation
-* Use atomic booking logic
-* Calendar is source of truth
-
----
+* When AI asks to confirm a slot (e.g., "Do you want to confirm 2 PM?"), create a temporary hold:
+  ```json
+  {
+    "slot": "2026-05-01 14:00",
+    "status": "pending",
+    "expires_in": "60s"
+  }
+  ```
+* If Caller B requests the same slot while it's pending, AI sees it's held and offers alternatives.
+* On confirmation: Check slot again, if free -> create booking, remove hold.
+* Expiry: If no confirmation within 60 seconds, release the hold.
+* Calendar is the ultimate source of truth, but DB holds prevent race conditions.
 
 ---
 
@@ -316,8 +315,6 @@ availableSlots = allSlots - calendarEvents
 
 ---
 
----
-
 ## Pages
 
 ---
@@ -329,8 +326,6 @@ availableSlots = allSlots - calendarEvents
 
 ---
 
----
-
 ### 2. Templates Page
 
 * Clinic Agent Template
@@ -338,65 +333,43 @@ availableSlots = allSlots - calendarEvents
 
 ---
 
----
-
 ### 3. Custom Agent Page
 
-* form to configure clinic
-
----
+* form to configure clinic (name, services, timezone, operating days, hours)
+* Button: "Connect Google Calendar" (OAuth flow)
+* Button: "Get Number" (Provisions Twilio number via backend API)
 
 ---
 
 ### 4. Dashboard Page
 
----
-
-## Metrics Section
+#### Metrics Section
 
 * Total calls
 * Answered calls
 * Missed calls
 * Avg duration
 
----
-
----
-
-## Call Logs Table
+#### Call Logs Table
 
 Fields:
 
 * phone number
 * duration
-* outcome:
+* outcome: booked | no action | dropped
 
-  * booked
-  * no action
-  * dropped
-
----
-
----
-
-## Appointment Table
+#### Appointment Table
 
 * patient name
 * service
 * time
 * status
 
----
-
----
-
-## Schedule View
+#### Schedule View
 
 Display slots:
 
 | Time | Status | Patient |
-
----
 
 ---
 
@@ -406,13 +379,9 @@ Display slots:
 
 ---
 
----
-
 ### 6. Contact Page
 
 * form submission
-
----
 
 ---
 
@@ -445,8 +414,7 @@ Display slots:
 * STT: Deepgram
 * LLM: Claude
 * TTS: ElevenLabs
-
----
+* Telephony: Twilio
 
 ---
 
@@ -456,27 +424,19 @@ Display slots:
 
 ## If slot unavailable
 
-Return:
-
-> suggest next available slots
+Return: > suggest next available slots
 
 ---
 
 ## If clinic closed
 
-Return:
-
-> suggest next working day
+Return: > suggest next working day
 
 ---
 
 ## If AI uncertain
 
-Return:
-
-> ask clarification
-
----
+Return: > ask clarification
 
 ---
 
@@ -488,9 +448,10 @@ The system is complete when:
 
 * calls are handled end-to-end
 * bookings are stored correctly
-* no double booking occurs
+* no double booking occurs (Slot hold system functioning)
 * dashboard displays real data
 * AI responses are fast and clear
+* **Billing is SKIPPED for MVP.**
 
 ---
 
@@ -501,8 +462,6 @@ Do NOT:
 * over-engineer UI
 * build unnecessary features
 * allow AI to control business logic
-
----
 
 Focus ONLY on:
 
@@ -520,10 +479,7 @@ Generate:
 * API routes
 * real-time call handling logic
 
----
-
 If any ambiguity exists:
 
 → choose simplicity
 → prioritize reliability
-
