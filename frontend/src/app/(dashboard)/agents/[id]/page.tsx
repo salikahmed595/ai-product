@@ -121,9 +121,9 @@ export default function AgentBuilder({ params }: { params: { id: string } }) {
   return (
     <div className="flex flex-col min-h-[calc(100vh-6rem)] lg:h-[calc(100vh-6rem)] bg-background">
       {/* Top Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border/50">
+      <div className="flex items-center justify-between pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-4">
-          <Link href="/agents" className="text-muted-foreground hover:text-foreground">
+          <Link href="/agents" style={{ color: "var(--text-secondary)" }} className="hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </Link>
           <div className="flex flex-col">
@@ -131,13 +131,13 @@ export default function AgentBuilder({ params }: { params: { id: string } }) {
               type="text" 
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="font-bold text-xl bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-foreground w-full max-w-[200px] md:max-w-md"
+              className="font-bold text-xl bg-transparent border-none focus:outline-none focus:ring-0 p-0 w-full max-w-[200px] md:max-w-md text-white"
             />
-            <span className="text-xs text-muted-foreground">Agent ID: ag_{params.id === 'default' ? 'default_123' : params.id}</span>
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Agent ID: ag_{params.id === 'default' ? 'default_123' : params.id}</span>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm">
+          <button onClick={handleSave} disabled={loading} className="btn-primary text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm">
             {loading ? "Saving..." : <><Save size={16} /> Publish</>}
           </button>
         </div>
