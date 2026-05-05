@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, MoreVertical, Plus } from "lucide-react";
+import { Search, Plus, Bot, Phone, MoreVertical, Sparkles, ChevronRight, Activity } from "lucide-react";
 import Link from "next/link";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -14,96 +14,113 @@ export default function AgentsPage() {
     fetch(`${BACKEND_URL}/api/clinic`)
       .then(res => res.json())
       .then(res => {
-        // We currently only have 1 clinic supported in backend GET route, 
-        // but we'll map it to an array for the table view.
-        if (res.data) {
-          setAgents([res.data]);
-        }
+        if (res.data) setAgents([res.data]);
         setLoading(false);
       })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-border/50">
-      <div className="flex items-center justify-between p-6 border-b border-border/50">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          All Agents
-        </h1>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64"
-            />
-          </div>
-          <Link
-            href="/templates"
-            className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            Create an Agent
-          </Link>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Agents</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+            Build and manage your AI calling agents
+          </p>
         </div>
+        <Link
+          href="/agents/default"
+          className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2"
+        >
+          <Plus size={16} /> Create Agent
+        </Link>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      {/* Search */}
+      <div className="mb-6 flex items-center px-4 py-2.5 rounded-xl w-full max-w-sm" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <Search size={15} className="mr-2 shrink-0" style={{ color: "var(--text-muted)" }} />
+        <input type="text" placeholder="Search agents..." className="bg-transparent border-none outline-none text-sm w-full text-white" />
+      </div>
+
+      {/* Table */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(17,17,24,0.8)", border: "1px solid rgba(255,255,255,0.06)" }}>
         <table className="w-full text-left text-sm">
-          <thead className="text-muted-foreground font-medium border-b border-border/50 bg-gray-50/50">
-            <tr>
-              <th className="px-6 py-4">Agent Name</th>
-              <th className="px-6 py-4">Agent Type</th>
-              <th className="px-6 py-4">Voice</th>
-              <th className="px-6 py-4">Phone</th>
-              <th className="px-6 py-4">Edited by</th>
-              <th className="px-6 py-4 w-10"></th>
+          <thead>
+            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              {["Agent Name", "Model", "Voice", "Phone", "Last Edited", ""].map((h) => (
+                <th key={h} className="px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/50">
+          <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                  Loading agents...
+                <td colSpan={6} className="px-6 py-12 text-center text-sm" style={{ color: "var(--text-secondary)" }}>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                    Loading agents...
+                  </div>
                 </td>
               </tr>
             ) : agents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                  No agents found. Click "Create an Agent" to get started.
+                <td colSpan={6} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                      <Bot size={28} style={{ color: "#a78bfa" }} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white mb-1">No agents yet</p>
+                      <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Create your first AI agent to get started</p>
+                    </div>
+                    <Link href="/agents/default" className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 mt-2">
+                      <Plus size={15} /> Create Agent
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ) : (
               agents.map((agent, i) => (
-                <tr key={agent.id || i} className="hover:bg-muted/30 transition-colors group">
+                <tr key={agent.id || i} className="group transition-colors" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(124,58,237,0.04)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   <td className="px-6 py-4">
                     <Link href={`/agents/${agent.id || 'default'}`} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.25)" }}>
+                        <Bot size={16} style={{ color: "#a78bfa" }} />
                       </div>
-                      <span className="font-medium text-foreground hover:underline">{agent.name || "Unnamed Agent"}</span>
+                      <div>
+                        <div className="font-semibold text-white">{agent.name || "Unnamed Agent"}</div>
+                        <div className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "#10b981" }}>
+                          <Activity size={10} />
+                          Active
+                        </div>
+                      </div>
                     </Link>
                   </td>
-                  <td className="px-6 py-4 text-muted-foreground">Single Prompt</td>
+                  <td className="px-6 py-4">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: "rgba(6,182,212,0.1)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.2)" }}>
+                      GPT-4o Mini
+                    </span>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-bold">
-                        V
-                      </div>
-                      <span className="text-foreground">{agent.voice_id ? "Custom" : "Rachel"}</span>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "rgba(167,139,250,0.2)" }}>V</div>
+                      <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{agent.voice_id ? "Custom" : "Rachel"}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-muted-foreground">{agent.twilio_number || "Not assigned"}</td>
-                  <td className="px-6 py-4 text-muted-foreground">
-                    {agent.updated_at ? new Date(agent.updated_at).toLocaleString() : "Just now"}
+                  <td className="px-6 py-4 text-sm" style={{ color: "var(--text-secondary)" }}>
+                    {agent.twilio_number || <span style={{ color: "var(--text-muted)" }}>Not assigned</span>}
+                  </td>
+                  <td className="px-6 py-4 text-sm" style={{ color: "var(--text-muted)" }}>
+                    {agent.updated_at ? new Date(agent.updated_at).toLocaleDateString() : "Just now"}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
+                    <Link href={`/agents/${agent.id || 'default'}`} className="inline-flex items-center gap-1 text-xs font-medium opacity-0 group-hover:opacity-100 transition-all" style={{ color: "#a78bfa" }}>
+                      Edit <ChevronRight size={13} />
+                    </Link>
                   </td>
                 </tr>
               ))
