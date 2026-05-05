@@ -16,7 +16,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "var(--bg-base)" }}>
+    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#050508", color: "#f8fafc" }}>
 
       {/* ── NAV ── */}
       <header className="fixed top-0 inset-x-0 z-50 py-4 px-6">
