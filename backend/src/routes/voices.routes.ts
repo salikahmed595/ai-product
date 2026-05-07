@@ -1,6 +1,6 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
-export async function voicesRoutes(app: FastifyInstance) {
+export default async function (app: FastifyInstance) {
   app.get('/', async (request, reply) => {
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
