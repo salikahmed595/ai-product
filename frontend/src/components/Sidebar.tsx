@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Users, Home, Bot, Zap, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Home, Bot, Zap, Phone } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Sidebar() {
@@ -11,6 +11,7 @@ export function Sidebar() {
     { href: "/", label: "Home", icon: Home },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/agents", label: "Agents", icon: Bot },
+    { href: "/phone", label: "Phone Numbers", icon: Phone },
     { href: "/templates", label: "Templates", icon: Users },
   ];
 
