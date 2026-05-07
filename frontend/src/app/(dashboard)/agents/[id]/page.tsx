@@ -1,18 +1,50 @@
 "use client";
 import { useState, useEffect, useRef, use } from "react";
-import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check, Phone, Link2, AlertCircle, Info } from "lucide-react";
+import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check, Phone, Link2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { AGENT_TEMPLATES } from "@/lib/templates";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-const MODELS = [
-  { id: "gpt-4o-mini", label: "GPT-4o Mini", badge: "Default", color: "#10b981" },
-  { id: "gpt-4o", label: "GPT-4o", badge: "Powerful", color: "#7c3aed" },
-  { id: "gpt-4-turbo", label: "GPT-4 Turbo", badge: "Fast", color: "#06b6d4" },
-  { id: "gpt-3.5-turbo", label: "GPT-3.5 Turbo", badge: "Economy", color: "#f59e0b" },
+// ─── Model definitions ───────────────────────────────────────────────────────
+const MODEL_GROUPS = [
+  {
+    group: "Realtime — Best for Calling",
+    groupColor: "#f59e0b",
+    models: [
+      { id: "gpt-4o-realtime-preview", label: "GPT-4o Realtime", badge: "Best for Calls", color: "#f59e0b", desc: "Native speech · lowest latency" },
+      { id: "gpt-4o-mini-realtime-preview", label: "GPT-4o Mini Realtime", badge: "Fast & Cheap", color: "#10b981", desc: "Lightweight realtime model" },
+    ],
+  },
+  {
+    group: "GPT-4.1 Series — Latest",
+    groupColor: "#8b5cf6",
+    models: [
+      { id: "gpt-4.1", label: "GPT-4.1", badge: "Newest", color: "#8b5cf6", desc: "Most capable, latest flagship" },
+      { id: "gpt-4.1-mini", label: "GPT-4.1 Mini", badge: "Smart", color: "#6366f1", desc: "Fast & intelligent" },
+      { id: "gpt-4.1-nano", label: "GPT-4.1 Nano", badge: "Ultra-fast", color: "#06b6d4", desc: "Lowest cost, fastest response" },
+    ],
+  },
+  {
+    group: "GPT-4o Series",
+    groupColor: "#a855f7",
+    models: [
+      { id: "gpt-4o", label: "GPT-4o", badge: "Powerful", color: "#a855f7", desc: "Premium multimodal model" },
+      { id: "gpt-4o-mini", label: "GPT-4o Mini", badge: "Default", color: "#22c55e", desc: "Best cost / quality balance" },
+    ],
+  },
+  {
+    group: "Legacy",
+    groupColor: "#94a3b8",
+    models: [
+      { id: "gpt-4-turbo", label: "GPT-4 Turbo", badge: "Reliable", color: "#f97316", desc: "High-performance legacy" },
+      { id: "gpt-3.5-turbo", label: "GPT-3.5 Turbo", badge: "Economy", color: "#94a3b8", desc: "Most affordable option" },
+    ],
+  },
 ];
+const MODELS = MODEL_GROUPS.flatMap(g => g.models);
 
+// ─── Variable defaults ────────────────────────────────────────────────────────
 const DEFAULT_VARIABLES = [
   { key: "patient_name", label: "Patient Name", example: "Sarah Johnson" },
   { key: "clinic_name", label: "Clinic Name", example: "Glow Aesthetics" },
@@ -25,9 +57,268 @@ const DEFAULT_VARIABLES = [
 const CARD = { background: "rgba(27,24,64,0.75)", border: "1px solid rgba(139,92,246,0.14)" };
 const MUTED = "var(--text-secondary)";
 
+// ─── VoicePicker component ────────────────────────────────────────────────────
+function VoicePicker({
+  voiceId,
+  voiceName,
+  onSelect,
+}: {
+  voiceId: string;
+  voiceName: string;
+  onSelect: (id: string, name: string) => void;
+}) {
+  const [voices, setVoices] = useState<any[]>([]);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [voicesError, setVoicesError] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [genderFilter, setGenderFilter] = useState<"all" | "female" | "male">("all");
+  const [search, setSearch] = useState("");
+  const [playing, setPlaying] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && voices.length === 0 && !voicesLoading) {
+      setVoicesLoading(true);
+      setVoicesError(false);
+      fetch(`${BACKEND_URL}/api/voices`)
+        .then(r => r.json())
+        .then(d => { setVoices(d.voices || []); setVoicesLoading(false); })
+        .catch(() => { setVoicesLoading(false); setVoicesError(true); });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const filtered = voices.filter(v => {
+    const matchGender = genderFilter === "all" || v.gender === genderFilter;
+    const matchSearch =
+      !search ||
+      v.name.toLowerCase().includes(search.toLowerCase()) ||
+      (v.accent || "").toLowerCase().includes(search.toLowerCase()) ||
+      (v.description || "").toLowerCase().includes(search.toLowerCase());
+    return matchGender && matchSearch;
+  });
+
+  const playPreview = (e: React.MouseEvent, voice: any) => {
+    e.stopPropagation();
+    if (!voice.preview_url) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current = null;
+    }
+    if (playing === voice.voice_id) {
+      setPlaying(null);
+      return;
+    }
+    const audio = new Audio(voice.preview_url);
+    audioRef.current = audio;
+    setPlaying(voice.voice_id);
+    audio.play().catch(() => setPlaying(null));
+    audio.onended = () => setPlaying(null);
+  };
+
+  const genderBadge = (g: string) => ({
+    background: g === "female" ? "rgba(251,113,133,0.12)" : "rgba(96,165,250,0.12)",
+    color: g === "female" ? "#fb7185" : "#60a5fa",
+    border: `1px solid ${g === "female" ? "rgba(251,113,133,0.25)" : "rgba(96,165,250,0.25)"}`,
+  });
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all"
+        style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.22)", color: "var(--text-primary)" }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Volume2 size={14} style={{ color: "#c4b5fd" }} className="shrink-0" />
+          <span className="truncate">{voiceName || "Select a Voice"}</span>
+        </div>
+        <ChevronDown
+          size={14}
+          className="shrink-0 ml-1"
+          style={{ color: "var(--text-muted)", transform: open ? "rotate(180deg)" : "none", transition: "0.2s" }}
+        />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          className="absolute left-0 right-0 mt-1 rounded-xl z-30"
+          style={{
+            background: "#141130",
+            border: "1px solid rgba(139,92,246,0.28)",
+            maxHeight: "360px",
+            overflowY: "auto",
+            top: "100%",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Sticky header */}
+          <div
+            className="sticky top-0 p-2 space-y-1.5 z-10"
+            style={{ background: "#141130", borderBottom: "1px solid rgba(139,92,246,0.14)" }}
+          >
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search voices, accent, style..."
+              className="w-full px-3 py-1.5 rounded-lg text-xs"
+              style={{
+                background: "rgba(139,92,246,0.08)",
+                border: "1px solid rgba(139,92,246,0.2)",
+                color: "var(--text-primary)",
+                outline: "none",
+              }}
+            />
+            <div className="flex gap-1">
+              {(["all", "female", "male"] as const).map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGenderFilter(g)}
+                  className="flex-1 py-1 rounded-lg text-[10px] font-semibold capitalize transition-all"
+                  style={{
+                    background:
+                      genderFilter === g
+                        ? g === "female"
+                          ? "rgba(251,113,133,0.2)"
+                          : g === "male"
+                          ? "rgba(96,165,250,0.2)"
+                          : "rgba(139,92,246,0.2)"
+                        : "rgba(255,255,255,0.04)",
+                    color:
+                      genderFilter === g
+                        ? g === "female"
+                          ? "#fb7185"
+                          : g === "male"
+                          ? "#60a5fa"
+                          : "#c4b5fd"
+                        : "var(--text-muted)",
+                    border: `1px solid ${
+                      genderFilter === g
+                        ? g === "female"
+                          ? "rgba(251,113,133,0.3)"
+                          : g === "male"
+                          ? "rgba(96,165,250,0.3)"
+                          : "rgba(139,92,246,0.3)"
+                        : "transparent"
+                    }`,
+                  }}
+                >
+                  {g === "all" ? "All Voices" : g === "female" ? "♀ Female" : "♂ Male"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Body */}
+          {voicesLoading ? (
+            <div className="p-8 flex flex-col items-center justify-center gap-3">
+              <div className="w-6 h-6 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Loading ElevenLabs voices...</p>
+            </div>
+          ) : voicesError ? (
+            <div className="p-4 text-center text-xs" style={{ color: "#f87171" }}>
+              Failed to load voices — make sure backend is running
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>No voices found</div>
+          ) : (
+            <div className="p-1.5 space-y-0.5">
+              {filtered.map(v => (
+                <div
+                  key={v.voice_id}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all"
+                  style={{
+                    background: voiceId === v.voice_id ? "rgba(139,92,246,0.18)" : "transparent",
+                    border: `1px solid ${voiceId === v.voice_id ? "rgba(139,92,246,0.35)" : "transparent"}`,
+                  }}
+                  onClick={() => { onSelect(v.voice_id, v.name); setOpen(false); }}
+                >
+                  {/* Play button */}
+                  <button
+                    onClick={e => playPreview(e, v)}
+                    title={v.preview_url ? "Preview voice" : "No preview available"}
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-110"
+                    style={{
+                      background: playing === v.voice_id ? "rgba(139,92,246,0.55)" : "rgba(139,92,246,0.18)",
+                      border: `1px solid ${playing === v.voice_id ? "rgba(139,92,246,0.7)" : "rgba(139,92,246,0.3)"}`,
+                      opacity: v.preview_url ? 1 : 0.4,
+                    }}
+                  >
+                    {playing === v.voice_id ? (
+                      <div className="flex items-end gap-0.5 h-3">
+                        {[0, 0.1, 0.2].map(d => (
+                          <div
+                            key={d}
+                            className="w-0.5 rounded-full animate-bounce"
+                            style={{ background: "#c4b5fd", height: "60%", animationDelay: `${d}s` }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: 0,
+                          height: 0,
+                          borderStyle: "solid",
+                          borderWidth: "4px 0 4px 7px",
+                          borderColor: "transparent transparent transparent #c4b5fd",
+                          marginLeft: "1px",
+                        }}
+                      />
+                    )}
+                  </button>
+
+                  {/* Name + meta */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                      {v.name}
+                    </div>
+                    <div className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
+                      {[v.accent, v.description, v.use_case].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
+
+                  {/* Gender badge */}
+                  {v.gender !== "unknown" && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={genderBadge(v.gender)}
+                    >
+                      {v.gender === "female" ? "F" : "M"}
+                    </span>
+                  )}
+
+                  {/* Selected check */}
+                  {voiceId === v.voice_id && (
+                    <Check size={12} style={{ color: "#c4b5fd" }} className="shrink-0" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main AgentBuilder ────────────────────────────────────────────────────────
 export default function AgentBuilder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState<"llm"|"audio">("llm");
+  const [activeTab, setActiveTab] = useState<"llm" | "audio">("llm");
   const [model, setModel] = useState("gpt-4o-mini");
   const [modelOpen, setModelOpen] = useState(false);
   const [variables, setVariables] = useState(DEFAULT_VARIABLES);
@@ -41,13 +332,13 @@ export default function AgentBuilder({ params }: { params: Promise<{ id: string 
   const [saveError, setSaveError] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testInput, setTestInput] = useState("");
-  const [testHistory, setTestHistory] = useState<{role:string;content:string}[]>([]);
+  const [testHistory, setTestHistory] = useState<{ role: string; content: string }[]>([]);
   const [ttsInput, setTtsInput] = useState("Hello! Welcome to our clinic. How can I help you today?");
   const [audioUrl, setAudioUrl] = useState("");
   const [testingAudio, setTestingAudio] = useState(false);
   const [copied, setCopied] = useState("");
   const [prompt, setPrompt] = useState(
-`You are a professional receptionist for {{clinic_name}}.
+    `You are a professional receptionist for {{clinic_name}}.
 
 Your responsibilities:
 - Book appointments for services: {{services}}
@@ -66,6 +357,7 @@ STRICT RULES:
 - Always collect: patient name, service, preferred date/time`
   );
   const [formData, setFormData] = useState({ name: "My Agent", voice_id: "21m00Tcm4TlvDq8ikWAM" });
+  const [voiceName, setVoiceName] = useState("Rachel");
   const [twilio, setTwilio] = useState({ account_sid: "", auth_token: "", number: "" });
   const [twilioSaving, setTwilioSaving] = useState(false);
   const [twilioSaved, setTwilioSaved] = useState(false);
@@ -74,37 +366,28 @@ STRICT RULES:
   const [templateBanner, setTemplateBanner] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const modelDropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Read template ID from URL param — avoids React Strict Mode double-run issue
     const urlParams = new URLSearchParams(window.location.search);
     const templateId = urlParams.get("template");
     const tpl = templateId ? AGENT_TEMPLATES.find(t => t.id === templateId) : null;
 
     if (tpl) {
-      // Apply template immediately — don't load saved backend data over it
       setFormData({ name: tpl.name, voice_id: tpl.voice_id });
       setPrompt(tpl.prompt);
       setModel(tpl.model);
       setTemplateBanner(tpl.name);
-      // Still load Twilio credentials from backend
       fetch(`${BACKEND_URL}/api/clinic`)
         .then(r => r.json())
         .then(r => {
-          if (r.data) {
-            setTwilio({
-              account_sid: r.data.twilio_account_sid || "",
-              auth_token: r.data.twilio_auth_token || "",
-              number: r.data.twilio_number || "",
-            });
-          }
+          if (r.data) setTwilio({ account_sid: r.data.twilio_account_sid || "", auth_token: r.data.twilio_auth_token || "", number: r.data.twilio_number || "" });
           setLoading(false);
         })
         .catch(() => { setLoading(false); setLoadError(true); });
       return;
     }
 
-    // No template — load saved agent config from backend
     fetch(`${BACKEND_URL}/api/clinic`)
       .then(r => r.json())
       .then(r => {
@@ -112,11 +395,7 @@ STRICT RULES:
           setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
           if (r.data.system_prompt) setPrompt(r.data.system_prompt);
           if (r.data.llm_model) setModel(r.data.llm_model);
-          setTwilio({
-            account_sid: r.data.twilio_account_sid || "",
-            auth_token: r.data.twilio_auth_token || "",
-            number: r.data.twilio_number || "",
-          });
+          setTwilio({ account_sid: r.data.twilio_account_sid || "", auth_token: r.data.twilio_auth_token || "", number: r.data.twilio_number || "" });
         }
         setLoading(false);
       })
@@ -124,6 +403,15 @@ STRICT RULES:
   }, []);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [testHistory]);
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (modelDropRef.current && !modelDropRef.current.contains(e.target as Node)) setModelOpen(false);
+    };
+    if (modelOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [modelOpen]);
 
   const insertVariable = (key: string) => {
     const ta = textareaRef.current;
@@ -144,7 +432,8 @@ STRICT RULES:
     setSaving(true); setSaved(false); setSaveError(false);
     try {
       const r = await fetch(`${BACKEND_URL}/api/clinic`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, system_prompt: prompt, model }),
       });
       const d = await r.json();
@@ -168,7 +457,9 @@ STRICT RULES:
       });
       const d = await r.json();
       setTestHistory([...hist, { role: "assistant", content: d.response || "Error" }]);
-    } catch { setTestHistory([...hist, { role: "assistant", content: "Connection error." }]); }
+    } catch {
+      setTestHistory([...hist, { role: "assistant", content: "Connection error." }]);
+    }
     setTesting(false);
   };
 
@@ -194,18 +485,13 @@ STRICT RULES:
 
   const handleTwilioConnect = async () => {
     if (!twilio.account_sid.trim() || !twilio.auth_token.trim() || !twilio.number.trim()) {
-      setTwilioError("All three fields are required.");
-      return;
+      setTwilioError("All three fields are required."); return;
     }
     setTwilioSaving(true); setTwilioError(""); setTwilioSaved(false);
     try {
       const r = await fetch(`${BACKEND_URL}/api/clinic`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          twilio_account_sid: twilio.account_sid.trim(),
-          twilio_auth_token: twilio.auth_token.trim(),
-          twilio_number: twilio.number.trim(),
-        }),
+        body: JSON.stringify({ twilio_account_sid: twilio.account_sid.trim(), twilio_auth_token: twilio.auth_token.trim(), twilio_number: twilio.number.trim() }),
       });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error("save failed");
@@ -217,11 +503,9 @@ STRICT RULES:
   };
 
   const twilioConnected = Boolean(twilio.account_sid && twilio.auth_token && twilio.number);
-
   const removeVariable = (key: string) => setVariables(variables.filter(v => v.key !== key));
   const selectedModel = MODELS.find(m => m.id === model) || MODELS[0];
-
-  const inputStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "white", outline: "none", borderRadius: "12px" };
+  const inputStyle = { background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.18)", color: "var(--text-primary)", outline: "none", borderRadius: "12px" };
   const labelStyle = { color: "var(--text-muted)", fontSize: "10px", textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 600 };
 
   if (loading) return (
@@ -233,18 +517,17 @@ STRICT RULES:
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
-      {/* Template loaded banner */}
+      {/* Template banner */}
       {templateBanner && (
-        <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0 flex items-center gap-2" style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)", color: "#a78bfa" }}>
+        <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0 flex items-center gap-2" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
           <Sparkles size={14} />
           <span><strong>{templateBanner}</strong> template loaded — replace all <code className="font-mono text-purple-300">[BRACKETS]</code> with your business details, then click Publish.</span>
           <button onClick={() => setTemplateBanner("")} className="ml-auto shrink-0 hover:text-white transition-colors"><X size={14} /></button>
         </div>
       )}
-      {/* Error banners */}
       {loadError && (
         <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
-          Could not reach backend (http://localhost:8080). Make sure the backend is running: <code className="font-mono">npm run dev</code> in the <code className="font-mono">backend/</code> folder.
+          Could not reach backend. Make sure it&apos;s running: <code className="font-mono">npm run dev</code> in the <code className="font-mono">backend/</code> folder.
         </div>
       )}
       {saveError && (
@@ -252,15 +535,16 @@ STRICT RULES:
           Save failed — backend is not reachable. Restart the backend and try again.
         </div>
       )}
+
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 mb-4 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center justify-between pb-4 mb-4 shrink-0" style={{ borderBottom: "1px solid rgba(139,92,246,0.12)" }}>
         <div className="flex items-center gap-3">
-          <Link href="/agents" className="w-8 h-8 rounded-lg flex items-center justify-center hover:text-white transition-colors" style={{ background: "rgba(255,255,255,0.05)", color: MUTED }}>
+          <Link href="/agents" className="w-8 h-8 rounded-lg flex items-center justify-center hover:text-white transition-colors" style={{ background: "rgba(139,92,246,0.08)", color: MUTED, border: "1px solid rgba(139,92,246,0.18)" }}>
             <ArrowLeft size={16} />
           </Link>
           <div>
             <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="font-bold text-lg bg-transparent border-none focus:outline-none text-white p-0 w-48" />
+              className="font-bold text-lg bg-transparent border-none focus:outline-none p-0 w-48" style={{ color: "var(--text-primary)" }} />
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>ID: ag_{id}</div>
           </div>
           <span className="px-2.5 py-1 text-xs font-semibold rounded-lg" style={{ background: `${selectedModel.color}18`, color: selectedModel.color, border: `1px solid ${selectedModel.color}30` }}>
@@ -269,7 +553,7 @@ STRICT RULES:
         </div>
         <button onClick={handleSave} disabled={saving}
           className="text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
-          style={{ background: saveError ? "rgba(239,68,68,0.7)" : saving ? "rgba(124,58,237,0.5)" : "var(--accent, #7c3aed)" }}>
+          style={{ background: saveError ? "rgba(239,68,68,0.7)" : saving ? "rgba(139,92,246,0.5)" : "linear-gradient(135deg,#9333ea,#7c3aed)" }}>
           {saveError ? "Save Failed!" : saved ? <><Check size={15} /> Saved!</> : saving ? "Saving..." : <><Save size={15} /> Publish</>}
         </button>
       </div>
@@ -279,22 +563,22 @@ STRICT RULES:
 
         {/* COL 1: Prompt Editor */}
         <div className="flex flex-col rounded-2xl overflow-hidden" style={{ width: "38%", ...CARD }}>
-          <div className="px-4 py-3 flex items-center gap-2 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <Bot size={15} style={{ color: "#a78bfa" }} />
-            <span className="text-sm font-semibold text-white">System Prompt</span>
+          <div className="px-4 py-3 flex items-center gap-2 shrink-0" style={{ borderBottom: "1px solid rgba(139,92,246,0.1)" }}>
+            <Bot size={15} style={{ color: "#c4b5fd" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>System Prompt</span>
           </div>
 
           {/* Variable Insert Bar */}
-          <div className="px-3 py-2 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+          <div className="px-3 py-2 shrink-0" style={{ borderBottom: "1px solid rgba(139,92,246,0.1)", background: "rgba(139,92,246,0.03)" }}>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles size={11} style={{ color: "#a78bfa" }} />
-              <span style={{ ...labelStyle }}>Insert Variable</span>
+              <Sparkles size={11} style={{ color: "#c4b5fd" }} />
+              <span style={labelStyle}>Insert Variable</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {variables.map(v => (
                 <button key={v.key} onClick={() => insertVariable(v.key)}
                   className="group flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all hover:-translate-y-0.5"
-                  style={{ background: "rgba(124,58,237,0.12)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.2)" }}>
+                  style={{ background: "rgba(139,92,246,0.12)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.22)" }}>
                   {`{{${v.key}}}`}
                 </button>
               ))}
@@ -303,7 +587,7 @@ STRICT RULES:
 
           <textarea ref={textareaRef} value={prompt} onChange={e => setPrompt(e.target.value)}
             className="flex-1 p-4 bg-transparent text-sm font-mono leading-relaxed resize-none focus:outline-none custom-scrollbar"
-            style={{ color: "#e2e8f0" }} placeholder="Write your system prompt here..." />
+            style={{ color: "var(--text-primary)" }} placeholder="Write your system prompt here..." />
         </div>
 
         {/* COL 2: Settings */}
@@ -312,31 +596,79 @@ STRICT RULES:
           {/* Model Selector */}
           <div className="rounded-2xl p-4" style={CARD}>
             <div style={labelStyle} className="mb-3">AI Model</div>
-            <div className="relative">
-              <button onClick={() => setModelOpen(!modelOpen)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm text-white transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="relative" ref={modelDropRef}>
+              <button onClick={() => setModelOpen(!modelOpen)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all"
+                style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.22)", color: "var(--text-primary)" }}>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: selectedModel.color }} />
-                  {selectedModel.label}
-                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${selectedModel.color}20`, color: selectedModel.color }}>{selectedModel.badge}</span>
+                  <span className="truncate">{selectedModel.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: `${selectedModel.color}22`, color: selectedModel.color }}>{selectedModel.badge}</span>
                 </div>
-                <ChevronDown size={14} style={{ color: MUTED, transform: modelOpen ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+                <ChevronDown size={14} style={{ color: MUTED, transform: modelOpen ? "rotate(180deg)" : "none", transition: "0.2s" }} className="shrink-0" />
               </button>
               {modelOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20" style={{ background: "#0d0d14", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  {MODELS.map(m => (
-                    <button key={m.id} onClick={() => { setModel(m.id); setModelOpen(false); }}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors hover:bg-white/5"
-                      style={{ color: model === m.id ? "white" : MUTED }}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-                        {m.label}
+                <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 custom-scrollbar"
+                  style={{ background: "#141130", border: "1px solid rgba(139,92,246,0.28)", maxHeight: "320px", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+                  {MODEL_GROUPS.map(g => (
+                    <div key={g.group}>
+                      {/* Group header */}
+                      <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest" style={{ color: g.groupColor, background: `${g.groupColor}0a`, borderBottom: `1px solid ${g.groupColor}18` }}>
+                        {g.group}
                       </div>
-                      <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${m.color}20`, color: m.color }}>{m.badge}</span>
-                    </button>
+                      {g.models.map(m => (
+                        <button key={m.id} onClick={() => { setModel(m.id); setModelOpen(false); }}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors"
+                          style={{
+                            background: model === m.id ? "rgba(139,92,246,0.12)" : "transparent",
+                            color: model === m.id ? "var(--text-primary)" : MUTED,
+                          }}
+                          onMouseEnter={e => { if (model !== m.id) (e.currentTarget.style.background = "rgba(255,255,255,0.04)"); }}
+                          onMouseLeave={e => { if (model !== m.id) (e.currentTarget.style.background = "transparent"); }}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: m.color }} />
+                            <div className="min-w-0">
+                              <div className="font-medium text-xs truncate">{m.label}</div>
+                              <div className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{m.desc}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold" style={{ background: `${m.color}20`, color: m.color }}>{m.badge}</span>
+                            {model === m.id && <Check size={11} style={{ color: m.color }} />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Voice Picker */}
+          <div className="rounded-2xl p-4" style={CARD}>
+            <div style={labelStyle} className="mb-3">Voice — Powered by ElevenLabs</div>
+            <VoicePicker
+              voiceId={formData.voice_id}
+              voiceName={voiceName}
+              onSelect={(id, name) => {
+                setFormData({ ...formData, voice_id: id });
+                setVoiceName(name);
+              }}
+            />
+            <div className="mt-3 space-y-3">
+              {[
+                { label: "Speed", min: 0.5, max: 2, step: 0.1, default: 1 },
+                { label: "Stability", min: 0, max: 1, step: 0.1, default: 0.7 },
+              ].map(s => (
+                <div key={s.label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{s.label}</span>
+                    <span className="text-xs font-mono" style={{ color: "#c4b5fd" }}>{s.default}</span>
+                  </div>
+                  <input type="range" min={s.min} max={s.max} step={s.step} defaultValue={s.default}
+                    className="w-full h-1 rounded-full appearance-none cursor-pointer" style={{ accentColor: "#8b5cf6" }} />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -344,15 +676,15 @@ STRICT RULES:
           <div className="rounded-2xl p-4" style={CARD}>
             <div className="flex items-center justify-between mb-3">
               <div style={labelStyle}>Variables</div>
-              <button onClick={() => setAddingVar(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:text-white" style={{ color: "#a78bfa", background: "rgba(124,58,237,0.1)" }}>
+              <button onClick={() => setAddingVar(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:text-white" style={{ color: "#c4b5fd", background: "rgba(139,92,246,0.1)" }}>
                 <Plus size={11} /> Add
               </button>
             </div>
             <div className="space-y-2">
               {variables.map(v => (
-                <div key={v.key} className="flex items-center justify-between rounded-lg px-3 py-2 group" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <div key={v.key} className="flex items-center justify-between rounded-lg px-3 py-2 group" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.1)" }}>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-mono text-purple-400 truncate">{`{{${v.key}}}`}</div>
+                    <div className="text-xs font-mono truncate" style={{ color: "#c4b5fd" }}>{`{{${v.key}}}`}</div>
                     <div className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>e.g. {v.example}</div>
                   </div>
                   <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -368,12 +700,11 @@ STRICT RULES:
                 </div>
               ))}
               {addingVar && (
-                <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                  <input value={newVarKey} onChange={e => setNewVarKey(e.target.value)} placeholder="variable_name" className="w-full px-3 py-2 text-xs rounded-lg"
-                    style={{ ...inputStyle, fontFamily: "monospace" }} />
+                <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  <input value={newVarKey} onChange={e => setNewVarKey(e.target.value)} placeholder="variable_name" className="w-full px-3 py-2 text-xs rounded-lg" style={{ ...inputStyle, fontFamily: "monospace" }} />
                   <input value={newVarExample} onChange={e => setNewVarExample(e.target.value)} placeholder="Example value" className="w-full px-3 py-2 text-xs rounded-lg" style={inputStyle} />
                   <div className="flex gap-2">
-                    <button onClick={addVariable} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "rgba(124,58,237,0.6)" }}>Add</button>
+                    <button onClick={addVariable} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "rgba(139,92,246,0.6)" }}>Add</button>
                     <button onClick={() => setAddingVar(false)} className="flex-1 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.05)", color: MUTED }}>Cancel</button>
                   </div>
                 </div>
@@ -381,67 +712,39 @@ STRICT RULES:
             </div>
           </div>
 
-          {/* Voice Settings */}
-          <div className="rounded-2xl p-4" style={CARD}>
-            <div style={labelStyle} className="mb-3">Voice Settings</div>
-            <div className="space-y-3">
-              <div>
-                <div className="text-xs mb-1.5 text-white">Voice ID</div>
-                <input value={formData.voice_id} onChange={e => setFormData({ ...formData, voice_id: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} placeholder="ElevenLabs voice ID" />
-              </div>
-              {[{ label: "Speed", min: 0.5, max: 2, step: 0.1, default: 1 }, { label: "Stability", min: 0, max: 1, step: 0.1, default: 0.7 }].map(s => (
-                <div key={s.label}>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-xs text-white">{s.label}</span>
-                    <span className="text-xs font-mono" style={{ color: "#a78bfa" }}>{s.default}</span>
-                  </div>
-                  <input type="range" min={s.min} max={s.max} step={s.step} defaultValue={s.default} className="w-full h-1 rounded-full appearance-none cursor-pointer" style={{ accentColor: "#7c3aed" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Twilio Connect */}
           <div className="rounded-2xl p-4" style={CARD}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Phone size={13} style={{ color: twilioConnected ? "#10b981" : "#a78bfa" }} />
+                <Phone size={13} style={{ color: twilioConnected ? "#10b981" : "#c4b5fd" }} />
                 <span style={labelStyle}>Twilio Account</span>
               </div>
               {twilioConnected && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>
-                  Connected
-                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>Connected</span>
               )}
             </div>
-
             {twilioConnected && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3 text-xs" style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.15)" }}>
                 <Link2 size={11} style={{ color: "#10b981" }} />
                 <span style={{ color: "#10b981" }}>{twilio.number}</span>
               </div>
             )}
-
             {twilioError && (
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl mb-3 text-xs" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
                 <AlertCircle size={11} /> {twilioError}
               </div>
             )}
-
             <div className="space-y-2">
               <div>
                 <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Account SID</div>
                 <input value={twilio.account_sid} onChange={e => setTwilio({ ...twilio, account_sid: e.target.value })}
-                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
               </div>
               <div>
                 <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Auth Token</div>
                 <div className="relative">
                   <input value={twilio.auth_token} onChange={e => setTwilio({ ...twilio, auth_token: e.target.value })}
-                    type={showToken ? "text" : "password"}
-                    placeholder="••••••••••••••••••••••••••••••••"
+                    type={showToken ? "text" : "password"} placeholder="••••••••••••••••••••••••••••••••"
                     className="w-full px-3 py-2 text-xs rounded-xl font-mono pr-8" style={inputStyle} />
                   <button onClick={() => setShowToken(!showToken)} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "var(--text-muted)" }}>
                     {showToken ? "hide" : "show"}
@@ -451,21 +754,19 @@ STRICT RULES:
               <div>
                 <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Phone Number</div>
                 <input value={twilio.number} onChange={e => setTwilio({ ...twilio, number: e.target.value })}
-                  placeholder="+15551234567"
-                  className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
+                  placeholder="+15551234567" className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
               </div>
               <button onClick={handleTwilioConnect} disabled={twilioSaving}
                 className="w-full py-2 rounded-xl text-xs font-semibold text-white mt-1 flex items-center justify-center gap-1.5"
-                style={{ background: twilioSaved ? "rgba(16,185,129,0.7)" : "rgba(124,58,237,0.6)" }}>
+                style={{ background: twilioSaved ? "rgba(16,185,129,0.7)" : "rgba(139,92,246,0.6)" }}>
                 {twilioSaving ? <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> :
                   twilioSaved ? <><Check size={12} /> Connected!</> :
                   <><Link2 size={12} /> {twilioConnected ? "Update Connection" : "Connect Twilio"}</>}
               </button>
             </div>
-
             <p className="text-[10px] mt-3 leading-relaxed" style={{ color: "var(--text-muted)" }}>
               Get your credentials from{" "}
-              <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" style={{ color: "#a78bfa" }}>console.twilio.com</a>
+              <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" style={{ color: "#c4b5fd" }}>console.twilio.com</a>
             </p>
           </div>
 
@@ -473,32 +774,33 @@ STRICT RULES:
           <div className="rounded-2xl p-4" style={CARD}>
             <div style={labelStyle} className="mb-3">Call Settings</div>
             <div className="space-y-3">
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <span className="text-xs text-white">Max Duration</span>
-                  <span className="text-xs font-mono" style={{ color: "#a78bfa" }}>30 min</span>
+              {[
+                { label: "Max Duration", value: "30 min", min: 1, max: 120, default: 30 },
+                { label: "Responsiveness", value: "600ms", min: 100, max: 3000, default: 600 },
+              ].map(s => (
+                <div key={s.label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{s.label}</span>
+                    <span className="text-xs font-mono" style={{ color: "#c4b5fd" }}>{s.value}</span>
+                  </div>
+                  <input type="range" min={s.min} max={s.max} defaultValue={s.default} className="w-full h-1 rounded-full appearance-none cursor-pointer" style={{ accentColor: "#8b5cf6" }} />
                 </div>
-                <input type="range" min={1} max={120} defaultValue={30} className="w-full h-1 rounded-full appearance-none cursor-pointer" style={{ accentColor: "#7c3aed" }} />
-              </div>
-              <div>
-                <div className="flex justify-between mb-1.5">
-                  <span className="text-xs text-white">Responsiveness</span>
-                  <span className="text-xs font-mono" style={{ color: "#a78bfa" }}>600ms</span>
-                </div>
-                <input type="range" min={100} max={3000} defaultValue={600} className="w-full h-1 rounded-full appearance-none cursor-pointer" style={{ accentColor: "#7c3aed" }} />
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* COL 3: Test Pane */}
         <div className="flex flex-col rounded-2xl overflow-hidden" style={{ flex: 1, ...CARD }}>
-          {/* Tab Header */}
-          <div className="flex shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex shrink-0" style={{ borderBottom: "1px solid rgba(139,92,246,0.1)" }}>
             {(["llm", "audio"] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className="flex-1 py-3.5 text-sm font-semibold transition-all"
-                style={{ color: activeTab === tab ? "white" : MUTED, borderBottom: `2px solid ${activeTab === tab ? "#7c3aed" : "transparent"}`, background: "transparent" }}>
+                style={{
+                  color: activeTab === tab ? "var(--text-primary)" : MUTED,
+                  borderBottom: `2px solid ${activeTab === tab ? "#8b5cf6" : "transparent"}`,
+                  background: "transparent",
+                }}>
                 {tab === "llm" ? "Test LLM" : "Test Audio"}
               </button>
             ))}
@@ -510,11 +812,11 @@ STRICT RULES:
                 <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-3">
                   {testHistory.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-6">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                        <Bot size={22} style={{ color: "#a78bfa" }} />
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)" }}>
+                        <Bot size={22} style={{ color: "#c4b5fd" }} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-white">Test your agent</p>
+                        <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Test your agent</p>
                         <p className="text-xs mt-1" style={{ color: MUTED }}>Chat to see how your agent responds based on the system prompt</p>
                       </div>
                     </div>
@@ -523,16 +825,16 @@ STRICT RULES:
                     <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
                         style={msg.role === "user"
-                          ? { background: "linear-gradient(135deg, #7c3aed, #6d28d9)", color: "white", borderBottomRightRadius: "4px" }
-                          : { background: "rgba(255,255,255,0.06)", color: "#e2e8f0", borderBottomLeftRadius: "4px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          ? { background: "linear-gradient(135deg, #9333ea, #7c3aed)", color: "white", borderBottomRightRadius: "4px" }
+                          : { background: "rgba(139,92,246,0.08)", color: "var(--text-primary)", borderBottomLeftRadius: "4px", border: "1px solid rgba(139,92,246,0.15)" }}>
                         {msg.content}
                       </div>
                     </div>
                   ))}
                   {testing && (
                     <div className="flex justify-start">
-                      <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        {[0, 0.15, 0.3].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#a78bfa", animationDelay: `${d}s` }} />)}
+                      <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.15)" }}>
+                        {[0, 0.15, 0.3].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#c4b5fd", animationDelay: `${d}s` }} />)}
                       </div>
                     </div>
                   )}
@@ -540,8 +842,7 @@ STRICT RULES:
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <input value={testInput} onChange={e => setTestInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTestLLM()}
-                    placeholder="Type a message..." className="flex-1 px-4 py-2.5 rounded-xl text-sm min-w-0"
-                    style={{ ...inputStyle }} />
+                    placeholder="Type a message..." className="flex-1 px-4 py-2.5 rounded-xl text-sm min-w-0" style={inputStyle} />
                   <button onClick={handleTestLLM} disabled={testing || !testInput.trim()}
                     className="btn-primary text-white px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 shrink-0">
                     Send
@@ -551,11 +852,11 @@ STRICT RULES:
             ) : (
               <div className="flex flex-col gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-white mb-1">Voice Testing</p>
-                  <p className="text-xs mb-3" style={{ color: MUTED }}>Type text to hear how your agent sounds</p>
+                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Voice Testing</p>
+                  <p className="text-xs mb-3" style={{ color: MUTED }}>Type text to hear how your selected voice sounds</p>
                   <textarea value={ttsInput} onChange={e => setTtsInput(e.target.value)} rows={4}
                     className="w-full px-4 py-3 text-sm rounded-xl resize-none focus:outline-none custom-scrollbar"
-                    style={{ ...inputStyle }} />
+                    style={inputStyle} />
                   <button onClick={handleTestAudio} disabled={testingAudio || !ttsInput.trim()}
                     className="btn-primary text-white w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 mt-3 disabled:opacity-40">
                     <Volume2 size={16} />
@@ -563,8 +864,8 @@ STRICT RULES:
                   </button>
                 </div>
                 {audioUrl && (
-                  <div className="p-4 rounded-xl" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                    <p className="text-xs font-semibold mb-2" style={{ color: "#a78bfa" }}>AUDIO PREVIEW</p>
+                  <div className="p-4 rounded-xl" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                    <p className="text-xs font-semibold mb-2" style={{ color: "#c4b5fd" }}>AUDIO PREVIEW</p>
                     <audio controls src={audioUrl} autoPlay className="w-full h-8" />
                   </div>
                 )}

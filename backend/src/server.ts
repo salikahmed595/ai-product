@@ -20,6 +20,7 @@ server.register(import('./routes/twilio.routes.js'), { prefix: '/api/twilio' });
 server.register(import('./routes/calls.routes.js'), { prefix: '/api/calls' });
 server.register(import('./routes/appointments.routes.js'), { prefix: '/api/appointments' });
 server.register(import('./routes/ai.routes.js'), { prefix: '/api/ai' });
+server.register(import('./routes/voices.routes.js'), { prefix: '/api/voices' });
 
 // Health Check
 server.get('/health', async () => {
