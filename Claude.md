@@ -71,7 +71,10 @@ AI MUST NOT:
 Twilio → WebSocket → STT (Deepgram) → LLM (Claude) → Orchestrator → TTS (ElevenLabs) → Twilio
 ```
 
-* **API Keys:** Platform-owned. Clinics do NOT provide their own keys. All keys (Twilio, Deepgram, Claude, ElevenLabs) are securely stored in the backend `.env`.
+* **AI/Voice API Keys:** Platform-owned. Clinics do NOT provide their own Deepgram, ElevenLabs, or OpenAI keys. These are stored in the backend `.env`.
+* **Twilio:** User-owned. Each clinic brings their own Twilio account (Account SID + Auth Token + Phone Number). Users connect their Twilio account via a "Connect Twilio" section in the Agent Builder. Credentials are stored per-clinic in the `clinics` table (`twilio_account_sid`, `twilio_auth_token`, `twilio_number`). The backend reads these per-clinic credentials when handling calls — NOT a global platform Twilio account.
+
+> **Twilio Model (like CallFluent AI):** We act as a no-code interface that connects to the user's own Twilio account to automate inbound/outbound calls. The user creates their Twilio account, gets a number, and pastes their credentials into our platform. We use those credentials to configure webhooks and handle calls on their behalf.
 
 ---
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, use } from "react";
-import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check } from "lucide-react";
+import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check, Phone, Link2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -65,6 +65,11 @@ STRICT RULES:
 - Always collect: patient name, service, preferred date/time`
   );
   const [formData, setFormData] = useState({ name: "My Agent", voice_id: "21m00Tcm4TlvDq8ikWAM" });
+  const [twilio, setTwilio] = useState({ account_sid: "", auth_token: "", number: "" });
+  const [twilioSaving, setTwilioSaving] = useState(false);
+  const [twilioSaved, setTwilioSaved] = useState(false);
+  const [twilioError, setTwilioError] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +81,11 @@ STRICT RULES:
           setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
           if (r.data.system_prompt) setPrompt(r.data.system_prompt);
           if (r.data.llm_model) setModel(r.data.llm_model);
+          setTwilio({
+            account_sid: r.data.twilio_account_sid || "",
+            auth_token: r.data.twilio_auth_token || "",
+            number: r.data.twilio_number || "",
+          });
         }
         setLoading(false);
       })
@@ -150,6 +160,32 @@ STRICT RULES:
     setVariables([...variables, { key: newVarKey.replace(/\s+/g, "_").toLowerCase(), label: newVarKey, example: newVarExample }]);
     setNewVarKey(""); setNewVarExample(""); setAddingVar(false);
   };
+
+  const handleTwilioConnect = async () => {
+    if (!twilio.account_sid.trim() || !twilio.auth_token.trim() || !twilio.number.trim()) {
+      setTwilioError("All three fields are required.");
+      return;
+    }
+    setTwilioSaving(true); setTwilioError(""); setTwilioSaved(false);
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/clinic`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          twilio_account_sid: twilio.account_sid.trim(),
+          twilio_auth_token: twilio.auth_token.trim(),
+          twilio_number: twilio.number.trim(),
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error("save failed");
+      setTwilioSaved(true); setTimeout(() => setTwilioSaved(false), 3000);
+    } catch {
+      setTwilioError("Failed to save. Make sure backend is running.");
+    }
+    setTwilioSaving(false);
+  };
+
+  const twilioConnected = Boolean(twilio.account_sid && twilio.auth_token && twilio.number);
 
   const removeVariable = (key: string) => setVariables(variables.filter(v => v.key !== key));
   const selectedModel = MODELS.find(m => m.id === model) || MODELS[0];
@@ -325,6 +361,73 @@ STRICT RULES:
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Twilio Connect */}
+          <div className="rounded-2xl p-4" style={CARD}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Phone size={13} style={{ color: twilioConnected ? "#10b981" : "#a78bfa" }} />
+                <span style={labelStyle}>Twilio Account</span>
+              </div>
+              {twilioConnected && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}>
+                  Connected
+                </span>
+              )}
+            </div>
+
+            {twilioConnected && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3 text-xs" style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.15)" }}>
+                <Link2 size={11} style={{ color: "#10b981" }} />
+                <span style={{ color: "#10b981" }}>{twilio.number}</span>
+              </div>
+            )}
+
+            {twilioError && (
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl mb-3 text-xs" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+                <AlertCircle size={11} /> {twilioError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div>
+                <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Account SID</div>
+                <input value={twilio.account_sid} onChange={e => setTwilio({ ...twilio, account_sid: e.target.value })}
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
+              </div>
+              <div>
+                <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Auth Token</div>
+                <div className="relative">
+                  <input value={twilio.auth_token} onChange={e => setTwilio({ ...twilio, auth_token: e.target.value })}
+                    type={showToken ? "text" : "password"}
+                    placeholder="••••••••••••••••••••••••••••••••"
+                    className="w-full px-3 py-2 text-xs rounded-xl font-mono pr-8" style={inputStyle} />
+                  <button onClick={() => setShowToken(!showToken)} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    {showToken ? "hide" : "show"}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] mb-1" style={{ color: "var(--text-muted)" }}>Phone Number</div>
+                <input value={twilio.number} onChange={e => setTwilio({ ...twilio, number: e.target.value })}
+                  placeholder="+15551234567"
+                  className="w-full px-3 py-2 text-xs rounded-xl font-mono" style={inputStyle} />
+              </div>
+              <button onClick={handleTwilioConnect} disabled={twilioSaving}
+                className="w-full py-2 rounded-xl text-xs font-semibold text-white mt-1 flex items-center justify-center gap-1.5"
+                style={{ background: twilioSaved ? "rgba(16,185,129,0.7)" : "rgba(124,58,237,0.6)" }}>
+                {twilioSaving ? <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> :
+                  twilioSaved ? <><Check size={12} /> Connected!</> :
+                  <><Link2 size={12} /> {twilioConnected ? "Update Connection" : "Connect Twilio"}</>}
+              </button>
+            </div>
+
+            <p className="text-[10px] mt-3 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              Get your credentials from{" "}
+              <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" style={{ color: "#a78bfa" }}>console.twilio.com</a>
+            </p>
           </div>
 
           {/* Call Settings */}

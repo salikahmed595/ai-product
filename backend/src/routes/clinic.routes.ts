@@ -32,6 +32,9 @@ export default async function (server: FastifyInstance) {
       if (body.system_prompt !== undefined) clinicData.system_prompt = body.system_prompt;
       if (body.voice_id !== undefined) clinicData.voice_id = body.voice_id;
       if (body.model !== undefined) clinicData.llm_model = body.model;
+      if (body.twilio_account_sid !== undefined) clinicData.twilio_account_sid = body.twilio_account_sid;
+      if (body.twilio_auth_token !== undefined) clinicData.twilio_auth_token = body.twilio_auth_token;
+      if (body.twilio_number !== undefined) clinicData.twilio_number = body.twilio_number;
 
       // Check if one exists
       const { data: existing } = await supabase.from('clinics').select('id').limit(1).single();
