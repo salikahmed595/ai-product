@@ -74,13 +74,28 @@ STRICT RULES:
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Check if a template was selected from the Templates page
+    const pendingTemplate = localStorage.getItem("pending_template");
+    if (pendingTemplate) {
+      try {
+        const tpl = JSON.parse(pendingTemplate);
+        setFormData(prev => ({ ...prev, name: tpl.name || prev.name, voice_id: tpl.voice_id || prev.voice_id }));
+        if (tpl.prompt) setPrompt(tpl.prompt);
+        if (tpl.model) setModel(tpl.model);
+        localStorage.removeItem("pending_template");
+      } catch {}
+    }
+
     fetch(`${BACKEND_URL}/api/clinic`)
       .then(r => r.json())
       .then(r => {
         if (r.data) {
-          setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
-          if (r.data.system_prompt) setPrompt(r.data.system_prompt);
-          if (r.data.llm_model) setModel(r.data.llm_model);
+          // Only load saved values if no template was just applied
+          if (!pendingTemplate) {
+            setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
+            if (r.data.system_prompt) setPrompt(r.data.system_prompt);
+            if (r.data.llm_model) setModel(r.data.llm_model);
+          }
           setTwilio({
             account_sid: r.data.twilio_account_sid || "",
             auth_token: r.data.twilio_auth_token || "",
