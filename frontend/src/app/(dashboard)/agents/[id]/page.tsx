@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, use } from "react";
-import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check, Phone, Link2, AlertCircle } from "lucide-react";
+import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check, Phone, Link2, AlertCircle, Info } from "lucide-react";
 import Link from "next/link";
+import { AGENT_TEMPLATES } from "@/lib/templates";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -70,32 +71,47 @@ STRICT RULES:
   const [twilioSaved, setTwilioSaved] = useState(false);
   const [twilioError, setTwilioError] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [templateBanner, setTemplateBanner] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check if a template was selected from the Templates page
-    const pendingTemplate = localStorage.getItem("pending_template");
-    if (pendingTemplate) {
-      try {
-        const tpl = JSON.parse(pendingTemplate);
-        setFormData(prev => ({ ...prev, name: tpl.name || prev.name, voice_id: tpl.voice_id || prev.voice_id }));
-        if (tpl.prompt) setPrompt(tpl.prompt);
-        if (tpl.model) setModel(tpl.model);
-        localStorage.removeItem("pending_template");
-      } catch {}
+    // Read template ID from URL param — avoids React Strict Mode double-run issue
+    const urlParams = new URLSearchParams(window.location.search);
+    const templateId = urlParams.get("template");
+    const tpl = templateId ? AGENT_TEMPLATES.find(t => t.id === templateId) : null;
+
+    if (tpl) {
+      // Apply template immediately — don't load saved backend data over it
+      setFormData({ name: tpl.name, voice_id: tpl.voice_id });
+      setPrompt(tpl.prompt);
+      setModel(tpl.model);
+      setTemplateBanner(tpl.name);
+      // Still load Twilio credentials from backend
+      fetch(`${BACKEND_URL}/api/clinic`)
+        .then(r => r.json())
+        .then(r => {
+          if (r.data) {
+            setTwilio({
+              account_sid: r.data.twilio_account_sid || "",
+              auth_token: r.data.twilio_auth_token || "",
+              number: r.data.twilio_number || "",
+            });
+          }
+          setLoading(false);
+        })
+        .catch(() => { setLoading(false); setLoadError(true); });
+      return;
     }
 
+    // No template — load saved agent config from backend
     fetch(`${BACKEND_URL}/api/clinic`)
       .then(r => r.json())
       .then(r => {
         if (r.data) {
-          // Only load saved values if no template was just applied
-          if (!pendingTemplate) {
-            setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
-            if (r.data.system_prompt) setPrompt(r.data.system_prompt);
-            if (r.data.llm_model) setModel(r.data.llm_model);
-          }
+          setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
+          if (r.data.system_prompt) setPrompt(r.data.system_prompt);
+          if (r.data.llm_model) setModel(r.data.llm_model);
           setTwilio({
             account_sid: r.data.twilio_account_sid || "",
             auth_token: r.data.twilio_auth_token || "",
@@ -217,6 +233,14 @@ STRICT RULES:
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
+      {/* Template loaded banner */}
+      {templateBanner && (
+        <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0 flex items-center gap-2" style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)", color: "#a78bfa" }}>
+          <Sparkles size={14} />
+          <span><strong>{templateBanner}</strong> template loaded — replace all <code className="font-mono text-purple-300">[BRACKETS]</code> with your business details, then click Publish.</span>
+          <button onClick={() => setTemplateBanner("")} className="ml-auto shrink-0 hover:text-white transition-colors"><X size={14} /></button>
+        </div>
+      )}
       {/* Error banners */}
       {loadError && (
         <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, Bot, Phone, MoreVertical, Sparkles, ChevronRight, Activity } from "lucide-react";
+import { Search, Plus, Bot, ChevronRight, Activity, AlertTriangle, Info } from "lucide-react";
 import Link from "next/link";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
@@ -9,6 +9,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:808
 export default function AgentsPage() {
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTwilioWarning, setShowTwilioWarning] = useState(false);
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/clinic`)
@@ -20,10 +21,56 @@ export default function AgentsPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  const hasAgentWithTwilio = agents.some(a => a.twilio_number);
+
+  const handleCreateClick = (e: React.MouseEvent) => {
+    if (hasAgentWithTwilio) {
+      e.preventDefault();
+      setShowTwilioWarning(true);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
+      {/* Twilio conflict modal */}
+      {showTwilioWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ background: "#0d0d14", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                <AlertTriangle size={20} style={{ color: "#f59e0b" }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-white">One number, one agent</h3>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Twilio limitation</p>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--text-secondary)" }}>
+              Each Twilio phone number can only be connected to <strong className="text-white">one AI agent</strong> at a time. You already have an agent with a connected number.
+            </p>
+            <div className="rounded-xl p-3 mb-5" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
+              <p className="text-xs leading-relaxed" style={{ color: "#fbbf24" }}>
+                <strong>To create a second agent:</strong> get a new Twilio phone number from your Twilio console, then connect it to the new agent. Multiple numbers = multiple agents.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowTwilioWarning(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                Cancel
+              </button>
+              <Link href="/agents/default" onClick={() => setShowTwilioWarning(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white text-center"
+                style={{ background: "rgba(245,158,11,0.7)" }}>
+                Create Anyway
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Agents</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
@@ -32,11 +79,20 @@ export default function AgentsPage() {
         </div>
         <Link
           href="/agents/default"
+          onClick={handleCreateClick}
           className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2"
         >
           <Plus size={16} /> Create Agent
         </Link>
       </div>
+
+      {/* One-number info strip */}
+      {hasAgentWithTwilio && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-xs" style={{ background: "rgba(6,182,212,0.07)", border: "1px solid rgba(6,182,212,0.15)", color: "#06b6d4" }}>
+          <Info size={13} className="shrink-0" />
+          Each Twilio number powers exactly one agent. Need another agent? Get a second number at <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="underline">console.twilio.com</a>.
+        </div>
+      )}
 
       {/* Search */}
       <div className="mb-6 flex items-center px-4 py-2.5 rounded-xl w-full max-w-sm" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -102,7 +158,7 @@ export default function AgentsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: "rgba(6,182,212,0.1)", color: "#06b6d4", border: "1px solid rgba(6,182,212,0.2)" }}>
-                      GPT-4o Mini
+                      {agent.llm_model || "GPT-4o Mini"}
                     </span>
                   </td>
                   <td className="px-6 py-4">

@@ -314,13 +314,8 @@ export default function TemplatesPage() {
   const [preview, setPreview] = useState<typeof TEMPLATES[0] | null>(null);
 
   const handleUseTemplate = (template: typeof TEMPLATES[0]) => {
-    localStorage.setItem("pending_template", JSON.stringify({
-      name: template.name,
-      prompt: template.prompt,
-      model: template.model,
-      voice_id: template.voice_id,
-    }));
-    router.push("/agents/default");
+    // Use URL param — avoids React Strict Mode double-effect clearing localStorage prematurely
+    router.push(`/agents/default?template=${template.id}`);
   };
 
   return (
