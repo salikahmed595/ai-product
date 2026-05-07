@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { Save, ArrowLeft, Volume2, Bot, Plus, X, ChevronDown, Sparkles, Copy, Check } from "lucide-react";
 import Link from "next/link";
 
@@ -24,7 +24,8 @@ const DEFAULT_VARIABLES = [
 const CARD = { background: "rgba(17,17,24,0.9)", border: "1px solid rgba(255,255,255,0.07)" };
 const MUTED = "var(--text-secondary)";
 
-export default function AgentBuilder({ params }: { params: { id: string } }) {
+export default function AgentBuilder({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [activeTab, setActiveTab] = useState<"llm"|"audio">("llm");
   const [model, setModel] = useState("gpt-4o-mini");
   const [modelOpen, setModelOpen] = useState(false);
@@ -32,8 +33,11 @@ export default function AgentBuilder({ params }: { params: { id: string } }) {
   const [newVarKey, setNewVarKey] = useState("");
   const [newVarExample, setNewVarExample] = useState("");
   const [addingVar, setAddingVar] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testInput, setTestInput] = useState("");
   const [testHistory, setTestHistory] = useState<{role:string;content:string}[]>([]);
@@ -65,13 +69,17 @@ STRICT RULES:
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/clinic`).then(r => r.json()).then(r => {
-      if (r.data) {
-        setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
-        if (r.data.system_prompt) setPrompt(r.data.system_prompt);
-        if (r.data.model) setModel(r.data.model);
-      }
-    }).catch(() => {});
+    fetch(`${BACKEND_URL}/api/clinic`)
+      .then(r => r.json())
+      .then(r => {
+        if (r.data) {
+          setFormData({ name: r.data.name || "My Agent", voice_id: r.data.voice_id || "21m00Tcm4TlvDq8ikWAM" });
+          if (r.data.system_prompt) setPrompt(r.data.system_prompt);
+          if (r.data.llm_model) setModel(r.data.llm_model);
+        }
+        setLoading(false);
+      })
+      .catch(() => { setLoading(false); setLoadError(true); });
   }, []);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [testHistory]);
@@ -92,12 +100,19 @@ STRICT RULES:
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    await fetch(`${BACKEND_URL}/api/clinic`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...formData, system_prompt: prompt, model }),
-    }).catch(() => {});
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000);
+    setSaving(true); setSaved(false); setSaveError(false);
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/clinic`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, system_prompt: prompt, model }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error("save failed");
+      setSaved(true); setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setSaveError(true); setTimeout(() => setSaveError(false), 4000);
+    }
+    setSaving(false);
   };
 
   const handleTestLLM = async () => {
@@ -142,8 +157,26 @@ STRICT RULES:
   const inputStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "white", outline: "none", borderRadius: "12px" };
   const labelStyle = { color: "var(--text-muted)", fontSize: "10px", textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 600 };
 
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-full gap-3">
+      <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+      <p className="text-sm" style={{ color: MUTED }}>Loading agent...</p>
+    </div>
+  );
+
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
+      {/* Error banners */}
+      {loadError && (
+        <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
+          Could not reach backend (http://localhost:8080). Make sure the backend is running: <code className="font-mono">npm run dev</code> in the <code className="font-mono">backend/</code> folder.
+        </div>
+      )}
+      {saveError && (
+        <div className="mb-3 px-4 py-2.5 rounded-xl text-sm font-medium shrink-0" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
+          Save failed — backend is not reachable. Restart the backend and try again.
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between pb-4 mb-4 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-3">
@@ -153,15 +186,16 @@ STRICT RULES:
           <div>
             <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="font-bold text-lg bg-transparent border-none focus:outline-none text-white p-0 w-48" />
-            <div className="text-xs" style={{ color: "var(--text-muted)" }}>ID: ag_{params.id}</div>
+            <div className="text-xs" style={{ color: "var(--text-muted)" }}>ID: ag_{id}</div>
           </div>
           <span className="px-2.5 py-1 text-xs font-semibold rounded-lg" style={{ background: `${selectedModel.color}18`, color: selectedModel.color, border: `1px solid ${selectedModel.color}30` }}>
             {selectedModel.label}
           </span>
         </div>
         <button onClick={handleSave} disabled={saving}
-          className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2">
-          {saved ? <><Check size={15} /> Saved!</> : saving ? "Saving..." : <><Save size={15} /> Publish</>}
+          className="text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
+          style={{ background: saveError ? "rgba(239,68,68,0.7)" : saving ? "rgba(124,58,237,0.5)" : "var(--accent, #7c3aed)" }}>
+          {saveError ? "Save Failed!" : saved ? <><Check size={15} /> Saved!</> : saving ? "Saving..." : <><Save size={15} /> Publish</>}
         </button>
       </div>
 

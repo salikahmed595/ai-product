@@ -34,10 +34,10 @@ export default function Home() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-sm font-medium px-4 py-2 rounded-xl transition-colors duration-200 hover:text-white" style={{ color: "var(--text-secondary)" }}>
+            <Link href="/login" className="text-sm font-medium px-4 py-2 rounded-xl transition-colors duration-200 hover:text-white" style={{ color: "var(--text-secondary)" }}>
               Sign In
             </Link>
-            <Link href="/dashboard" className="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl flex items-center gap-2">
+            <Link href="/signup" className="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl flex items-center gap-2">
               Get Started <ArrowRight size={15} />
             </Link>
           </div>
@@ -70,7 +70,7 @@ export default function Home() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 mt-2">
-            <Link href="/dashboard" className="btn-primary text-white font-bold px-8 py-4 rounded-2xl flex items-center justify-center gap-3 text-base">
+            <Link href="/signup" className="btn-primary text-white font-bold px-8 py-4 rounded-2xl flex items-center justify-center gap-3 text-base">
               Start Free Trial <ArrowRight size={18} />
             </Link>
             <button className="btn-secondary text-white font-semibold px-8 py-4 rounded-2xl flex items-center justify-center gap-3 text-base">
@@ -335,7 +335,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/dashboard" className={`block text-center font-bold py-3 rounded-xl transition-all ${plan.highlight ? "btn-primary text-white" : "btn-secondary text-white"}`}>
+                <Link href="/signup" className={`block text-center font-bold py-3 rounded-xl transition-all ${plan.highlight ? "btn-primary text-white" : "btn-secondary text-white"}`}>
                   {plan.cta}
                 </Link>
               </div>
@@ -358,10 +358,10 @@ export default function Home() {
                 Join 500+ aesthetic clinics. No credit card required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/dashboard" className="btn-primary text-white font-bold px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg">
+                <Link href="/signup" className="btn-primary text-white font-bold px-10 py-4 rounded-2xl flex items-center justify-center gap-3 text-lg">
                   Start Free Trial <ArrowRight size={20} />
                 </Link>
-                <Link href="/dashboard" className="btn-secondary text-white font-semibold px-10 py-4 rounded-2xl text-lg">
+                <Link href="/signup" className="btn-secondary text-white font-semibold px-10 py-4 rounded-2xl text-lg">
                   Book a Demo
                 </Link>
               </div>

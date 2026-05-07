@@ -15,6 +15,8 @@ CREATE TABLE clinics (
   google_access_token TEXT,
   google_refresh_token TEXT,
   google_calendar_id TEXT,
+  system_prompt TEXT,
+  voice_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

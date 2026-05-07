@@ -16,19 +16,22 @@ export default async function (server: FastifyInstance) {
   server.post('/', async (request, reply) => {
     try {
       const body = request.body as any;
-      const rawServices = body.services;
-      const clinicData = {
-        name: body.name,
-        services: Array.isArray(rawServices)
-          ? rawServices.map((s: string) => s.trim()).filter(Boolean)
-          : rawServices.split(',').map((s: string) => s.trim()).filter(Boolean),
-        timezone: body.timezone,
-        operating_days: body.operatingDays,
-        working_hours: body.workingHours,
-        slot_duration: 30,
-        system_prompt: body.system_prompt || null,
-        voice_id: body.voice_id || null,
-      };
+
+      const clinicData: Record<string, any> = { slot_duration: 30 };
+
+      if (body.name !== undefined) clinicData.name = body.name;
+      if (body.services !== undefined) {
+        const raw = body.services;
+        clinicData.services = Array.isArray(raw)
+          ? raw.map((s: string) => s.trim()).filter(Boolean)
+          : raw.split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
+      if (body.timezone !== undefined) clinicData.timezone = body.timezone;
+      if (body.operatingDays !== undefined) clinicData.operating_days = body.operatingDays;
+      if (body.workingHours !== undefined) clinicData.working_hours = body.workingHours;
+      if (body.system_prompt !== undefined) clinicData.system_prompt = body.system_prompt;
+      if (body.voice_id !== undefined) clinicData.voice_id = body.voice_id;
+      if (body.model !== undefined) clinicData.llm_model = body.model;
 
       // Check if one exists
       const { data: existing } = await supabase.from('clinics').select('id').limit(1).single();
