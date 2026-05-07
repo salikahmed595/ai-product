@@ -101,7 +101,7 @@ export default function AgentsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(17,17,24,0.8)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(27,24,64,0.75)", border: "1px solid rgba(139,92,246,0.14)" }}>
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>

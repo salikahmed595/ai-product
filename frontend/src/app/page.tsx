@@ -16,7 +16,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#050508", color: "#f8fafc" }}>
+    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#0e0b20", color: "#f0e9ff" }}>
 
       {/* ── NAV ── */}
       <header className="fixed top-0 inset-x-0 z-50 py-4 px-6">
@@ -47,8 +47,8 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex items-center justify-center gradient-mesh grid-lines px-6 pt-24">
         {/* Orbs */}
-        <div className="absolute top-32 left-1/4 w-96 h-96 rounded-full pulse-glow pointer-events-none" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
-        <div className="absolute bottom-32 right-1/4 w-64 h-64 rounded-full pulse-glow pointer-events-none" style={{ background: "radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)", filter: "blur(40px)", animationDelay: "2s" }} />
+        <div className="absolute top-32 left-1/4 w-96 h-96 rounded-full pulse-glow pointer-events-none" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.22) 0%, transparent 70%)", filter: "blur(40px)" }} />
+        <div className="absolute bottom-32 right-1/4 w-64 h-64 rounded-full pulse-glow pointer-events-none" style={{ background: "radial-gradient(circle, rgba(212,167,82,0.1) 0%, transparent 70%)", filter: "blur(40px)", animationDelay: "2s" }} />
 
         <div className="relative max-w-5xl mx-auto text-center flex flex-col items-center gap-8">
           {/* Badge */}

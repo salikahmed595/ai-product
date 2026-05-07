@@ -22,7 +22,7 @@ const DEFAULT_VARIABLES = [
   { key: "working_hours", label: "Working Hours", example: "Mon-Fri 9am-6pm" },
 ];
 
-const CARD = { background: "rgba(17,17,24,0.9)", border: "1px solid rgba(255,255,255,0.07)" };
+const CARD = { background: "rgba(27,24,64,0.75)", border: "1px solid rgba(139,92,246,0.14)" };
 const MUTED = "var(--text-secondary)";
 
 export default function AgentBuilder({ params }: { params: Promise<{ id: string }> }) {

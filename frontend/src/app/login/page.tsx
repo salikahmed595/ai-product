@@ -67,15 +67,15 @@ function LoginForm() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4" style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)" }}>
-            <Sparkles size={22} style={{ color: "#a78bfa" }} />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4" style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
+            <Sparkles size={22} style={{ color: "#c4b5fd" }} />
           </div>
           <h1 className="text-2xl font-bold text-white">Welcome back</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Sign in to your Aesthetic AI account</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl p-8" style={{ background: "rgba(17,17,24,0.9)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="rounded-2xl p-8" style={{ background: "rgba(27,24,64,0.8)", border: "1px solid rgba(139,92,246,0.18)" }}>
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
@@ -89,9 +89,9 @@ function LoginForm() {
             onClick={handleGoogleLogin}
             disabled={googleLoading}
             className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium text-white transition-all mb-6"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.22)" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(139,92,246,0.16)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(139,92,246,0.08)")}
           >
             {googleLoading ? (
               <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -108,16 +108,16 @@ function LoginForm() {
 
           {/* Divider */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="flex-1 h-px" style={{ background: "rgba(139,92,246,0.18)" }} />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>or continue with email</span>
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="flex-1 h-px" style={{ background: "rgba(139,92,246,0.18)" }} />
           </div>
 
           {/* Email/Password Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Email</label>
-              <div className="flex items-center px-4 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-center px-4 py-3 rounded-xl" style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)" }}>
                 <Mail size={15} className="mr-3 shrink-0" style={{ color: "var(--text-muted)" }} />
                 <input
                   type="email"
@@ -132,7 +132,7 @@ function LoginForm() {
 
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Password</label>
-              <div className="flex items-center px-4 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-center px-4 py-3 rounded-xl" style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)" }}>
                 <Lock size={15} className="mr-3 shrink-0" style={{ color: "var(--text-muted)" }} />
                 <input
                   type={showPassword ? "text" : "password"}

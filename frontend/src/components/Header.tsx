@@ -35,14 +35,14 @@ export function Header() {
 
       <div className="flex items-center gap-4">
         {/* Notification bell */}
-        <button className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "var(--text-secondary)" }}>
+        <button className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.18)", color: "var(--text-secondary)" }}>
           <Bell size={17} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: "#f43f5e", boxShadow: "0 0 6px rgba(244,63,94,0.6)" }} />
         </button>
 
         {/* Profile */}
         <div className="flex items-center gap-3 pl-4" style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white" style={{ background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.4)" }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm" style={{ background: "rgba(139,92,246,0.28)", border: "1px solid rgba(139,92,246,0.45)", color: "#f0e9ff" }}>
             {initials}
           </div>
           <div className="hidden sm:flex flex-col">
@@ -56,7 +56,7 @@ export function Header() {
           onClick={handleSignOut}
           title="Sign out"
           className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "var(--text-muted)" }}
+          style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.18)", color: "var(--text-muted)" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
           onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
         >

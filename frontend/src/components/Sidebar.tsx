@@ -40,13 +40,13 @@ export function Sidebar() {
               }`}
               style={
                 isActive
-                  ? { background: "rgba(124,58,237,0.15)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.25)" }
+                  ? { background: "rgba(139,92,246,0.18)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.32)" }
                   : { color: "var(--text-secondary)", border: "1px solid transparent" }
               }
             >
               <Icon size={18} />
               <span>{label}</span>
-              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#a78bfa" }} />}
+              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "#c4b5fd" }} />}
             </Link>
           );
         })}
@@ -54,13 +54,13 @@ export function Sidebar() {
 
       {/* Bottom status card */}
       <div className="mt-auto pb-2">
-        <div className="rounded-2xl p-4" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)" }}>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <p className="text-sm font-semibold text-white">Aesthetic MVP</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Aesthetic MVP</p>
           </div>
           <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Ready for calling</p>
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#a78bfa" }}>
+          <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#c4b5fd" }}>
             <Zap size={11} />
             <span>AI Active</span>
           </div>
