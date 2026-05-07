@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,8 +33,8 @@ function LoginForm() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/dashboard");
-      router.refresh();
+      // Hard navigate so middleware picks up the new session cookie
+      window.location.href = "/dashboard";
     }
   };
 
@@ -43,14 +42,21 @@ function LoginForm() {
     setGoogleLoading(true);
     setError("");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
     if (error) {
       setError(error.message);
+      setGoogleLoading(false);
+    } else if (data?.url) {
+      // Must manually redirect — @supabase/ssr does not auto-redirect
+      window.location.href = data.url;
+    } else {
+      setError("Could not initiate Google sign-in. Please try again.");
       setGoogleLoading(false);
     }
   };

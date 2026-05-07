@@ -51,14 +51,20 @@ export default function SignupPage() {
     setGoogleLoading(true);
     setError("");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
     if (error) {
       setError(error.message);
+      setGoogleLoading(false);
+    } else if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      setError("Could not initiate Google sign-in. Please try again.");
       setGoogleLoading(false);
     }
   };
