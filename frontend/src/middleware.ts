@@ -14,9 +14,11 @@ export function middleware(request: NextRequest) {
   const isAuthPage =
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
-  // Supabase stores the session in a cookie starting with "sb-"
+  // Supabase stores the session in cookies named "sb-<ref>-auth-token"
+  // With chunked sessions it becomes "sb-<ref>-auth-token.0", ".1" etc.
+  // Using includes() to match all variants
   const hasSession = request.cookies.getAll().some((c) =>
-    c.name.startsWith("sb-") && c.name.endsWith("-auth-token")
+    c.name.startsWith("sb-") && c.name.includes("-auth-token")
   );
 
   if (!hasSession && isDashboardRoute) {

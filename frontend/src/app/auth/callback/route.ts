@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const cookieStore = await cookies();
+    const cookiesToForward: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,19 +20,25 @@ export async function GET(request: NextRequest) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {}
+            // Capture cookies AND set them on the cookie store
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookiesToForward.push({ name, value, options: options ?? {} });
+              try { cookieStore.set(name, value, options); } catch {}
+            });
           },
         },
       }
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // Build the redirect and explicitly attach all session cookies to it
+      const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+      cookiesToForward.forEach(({ name, value, options }) => {
+        redirectResponse.cookies.set(name, value, options as Parameters<typeof redirectResponse.cookies.set>[2]);
+      });
+      return redirectResponse;
     }
   }
 

@@ -27,14 +27,15 @@ function LoginForm() {
     setError("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      // Hard navigate so middleware picks up the new session cookie
-      window.location.href = "/dashboard";
+    } else if (data.session) {
+      // Small delay so browser flushes the auth cookie before navigating
+      await new Promise(r => setTimeout(r, 200));
+      window.location.replace("/dashboard");
     }
   };
 
