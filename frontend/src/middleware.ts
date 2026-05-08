@@ -1,43 +1,80 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+// Paths that never require authentication
+const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
 
-  const isDashboardRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/agents") ||
-    pathname.startsWith("/templates") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/calls") ||
-    pathname.startsWith("/analytics");
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
 
-  const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/signup");
+export async function middleware(request: NextRequest) {
+  // supabaseResponse must be returned (not NextResponse.next()) so that
+  // refreshed session cookies written by Supabase are forwarded to the browser.
+  let supabaseResponse = NextResponse.next({ request });
 
-  // Supabase stores the session in cookies named "sb-<ref>-auth-token"
-  // With chunked sessions it becomes "sb-<ref>-auth-token.0", ".1" etc.
-  // Using includes() to match all variants
-  const hasSession = request.cookies.getAll().some((c) =>
-    c.name.startsWith("sb-") && c.name.includes("-auth-token")
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
   );
 
-  if (!hasSession && isDashboardRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  // SECURITY: use getUser() — validates the JWT with Supabase auth server.
+  // Never use getSession() here; it reads from the cookie without validation
+  // and can be spoofed by a crafted cookie.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // Unauthenticated request to any protected route → redirect to login
+  if (!user && !isPublicPath(pathname)) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    // Preserve destination so user is sent back after sign-in
+    if (pathname !== "/") {
+      loginUrl.searchParams.set("redirectTo", pathname);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (hasSession && isAuthPage) {
+  // Authenticated user on login/signup → send straight to dashboard
+  if (
+    user &&
+    (pathname.startsWith("/login") || pathname.startsWith("/signup"))
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  // Authenticated user on root (/) → serve home page (no redirect)
+
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Run on every path except Next.js internals and static assets
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
