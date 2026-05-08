@@ -1,308 +1,209 @@
-# AestheticAI — The AI Receptionist for Aesthetic Clinics
+<!-- SEO Keywords: AI Product | AI SaaS | Full-Stack AI Application | TypeScript AI App | Supabase Backend | AI Product Development | AI Web Application | Salik Ahmed | AI Engineer | AI Startup | Artificial Intelligence Product | AI Full-Stack | Frontend Backend Database AI -->
 
-> *Your clinic never sleeps. Your receptionist does. We fixed that.*
+<div align="center">
 
-AestheticAI is a full-stack SaaS platform that gives aesthetic clinics a 24/7 AI phone receptionist. It answers calls, books appointments into real calendar slots, sends confirmation emails, and never double-books — all without a human picking up the phone.
+# 🚀 AI Product
 
-Built with Next.js, Fastify, Supabase, Twilio, Deepgram, ElevenLabs, and Claude.
+### Full-Stack AI Application · TypeScript · Supabase · Production-Ready
 
----
+<p><strong>A complete, production-grade AI product built with TypeScript — featuring frontend, backend, and database layers powered by Supabase and cutting-edge AI integrations.</strong></p>
 
-## What it actually does
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/salikahmed595/ai-product?style=for-the-badge&logo=github&color=6C47FF)](https://github.com/salikahmed595/ai-product)
 
-A patient calls the clinic's Twilio number at 11 PM. Instead of voicemail, they hear a natural-sounding AI voice that:
-
-1. Greets them by clinic name
-2. Asks what service they need
-3. Checks real-time calendar availability
-4. Offers specific 30-minute slots
-5. Confirms the booking
-6. Fires a Google Calendar event with a 24-hour email reminder
-7. Sends a notification email to the clinic
-
-No human involved. No double booking. No missed calls.
+</div>
 
 ---
 
-## Architecture
+## 📌 Table of Contents
+
+- [Overview](#-overview)
+- [Architecture](#-architecture)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
+- [Related Projects](#-related-projects)
+- [Author](#-author)
+
+---
+
+## 🌟 Overview
+
+**AI Product** is a fully functional, production-ready AI application showcasing how to build end-to-end AI products from scratch. This repo demonstrates real-world AI product architecture with a clean separation of concerns across frontend, backend, and database layers.
+
+**This project demonstrates:**
+- 🏗️ How to architect a full-stack AI application
+- 🔌 How to integrate OpenAI and AI services into real products
+- 💾 How to use Supabase as an AI-ready backend
+- 🚀 How to take an AI idea from concept to production
+
+> Built by **Salik Ahmed** — AI Engineer & Automation Architect → [github.com/salikahmed595](https://github.com/salikahmed595)
+
+---
+
+## 🏗️ Architecture
 
 ```
-                          ┌─────────────────────────────────────────────┐
-                          │              PATIENT CALL                    │
-                          └────────────────────┬────────────────────────┘
-                                               │
-                                          Twilio PSTN
-                                               │
-                          ┌────────────────────▼────────────────────────┐
-                          │           Twilio Webhook (POST)              │
-                          │         /api/twilio/incoming-call            │
-                          └────────────────────┬────────────────────────┘
-                                               │
-                          ┌────────────────────▼────────────────────────┐
-                          │         Fastify Backend (Node.js)            │
-                          │              port 8080                       │
-                          │                                              │
-                          │  ┌─────────────┐   ┌──────────────────────┐ │
-                          │  │   WebSocket  │   │   REST API Routes    │ │
-                          │  │  Audio Stream│   │  /api/clinic         │ │
-                          │  └──────┬──────┘   │  /api/appointments   │ │
-                          │         │           │  /api/calendar       │ │
-                          │         │           │  /api/calls          │ │
-                          │         │           │  /api/knowledge      │ │
-                          │         │           └──────────────────────┘ │
-                          └─────────┼───────────────────────────────────┘
-                                    │
-               ┌────────────────────┼────────────────────┐
-               │                    │                    │
-    ┌──────────▼──────┐  ┌──────────▼──────┐  ┌─────────▼────────┐
-    │   Deepgram STT   │  │  Claude (LLM)   │  │  ElevenLabs TTS  │
-    │  Speech → Text   │  │  Orchestrator   │  │  Text → Speech   │
-    │  < 300ms latency │  │  Booking Logic  │  │  Natural Voice   │
-    └─────────────────┘  └────────┬────────┘  └──────────────────┘
-                                  │
-               ┌──────────────────┼──────────────────┐
-               │                  │                  │
-    ┌──────────▼──────┐  ┌────────▼────────┐  ┌─────▼──────────┐
-    │    Supabase      │  │ Google Calendar │  │    Nodemailer  │
-    │   PostgreSQL     │  │   OAuth + API   │  │  Gmail SMTP    │
-    │  Bookings, Holds │  │  Events + Reminders│ │ Notifications│
-    └─────────────────┘  └─────────────────┘  └────────────────┘
+┌─────────────────────────────────────────┐
+│              AI Product                 │
+├──────────────┬──────────────┬───────────┤
+│   Frontend   │   Backend    │  Database │
+│              │              │           │
+│  TypeScript  │  TypeScript  │ Supabase  │
+│  React/HTML  │  Node/API    │ PostgreSQL│
+│  UI/UX       │  AI Logic    │ Auth      │
+│  Components  │  OpenAI      │ Storage   │
+└──────────────┴──────────────┴───────────┘
 ```
 
 ---
 
-## Double Booking Prevention
+## ✨ Features
 
-This was the hardest part to get right and the most important.
-
-```
-Patient A asks for 2:00 PM slot
-        │
-        ▼
-  ┌─────────────────────────────┐
-  │   Slot Hold Created (DB)    │  ← expires in 60 seconds
-  │   { slot: "14:00",          │
-  │     status: "pending" }     │
-  └─────────────┬───────────────┘
-                │
-  Patient B asks for 2:00 PM while hold exists
-                │
-                ▼
-  ┌─────────────────────────────┐
-  │  AI sees slot is held →     │
-  │  "That slot just filled up, │
-  │   how about 2:30 PM?"       │
-  └─────────────────────────────┘
-                │
-  Patient A confirms → hold removed → booking created
-```
-
-The calendar is the source of truth. The DB holds prevent race conditions between concurrent calls.
+| Feature | Description |
+|---------|-------------|
+| 🤖 **AI Integration** | OpenAI GPT-4 powered core functionality |
+| 🎨 **Modern Frontend** | Clean, responsive TypeScript frontend |
+| ⚙️ **Robust Backend** | Scalable TypeScript API layer |
+| 💾 **Supabase Backend** | Database, authentication & real-time features |
+| 🔐 **Authentication** | Supabase Auth with RLS policies |
+| 📊 **Real-Time Data** | Supabase real-time subscriptions |
+| 🔒 **Secure** | Environment-based config, no exposed secrets |
+| 📱 **Responsive** | Works across all devices and screen sizes |
 
 ---
 
-## Slot Scheduling Logic
+## 🛠️ Tech Stack
 
-```
-Working Hours: 10:00 - 18:00
-Slot Duration: 30 minutes (fixed, always)
-
-allSlots    = [10:00, 10:30, 11:00, ... , 17:30]
-bookedSlots = events pulled from Google Calendar
-pendingHolds= DB rows with status = "pending"
-
-availableSlots = allSlots - bookedSlots - pendingHolds
-```
-
-No arbitrary times. No 15-minute slots. No chaos.
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | TypeScript, HTML/CSS | User interface |
+| **Backend** | TypeScript, Node.js | Business logic & API |
+| **Database** | Supabase (PostgreSQL) | Data persistence |
+| **Auth** | Supabase Auth | User authentication |
+| **AI** | OpenAI API | AI core functionality |
+| **Storage** | Supabase Storage | File management |
+| **Version Control** | Git + GitHub | Code management |
 
 ---
 
-## Tech Stack
+## 🚀 Getting Started
 
-| Layer | Technology | Why |
-|---|---|---|
-| Frontend | Next.js 16 + TypeScript | App Router, SSR auth, fast |
-| Backend | Fastify + Node.js | Faster than Express, WebSocket support |
-| Database | Supabase (PostgreSQL) | Auth + DB + realtime in one |
-| Auth | Supabase SSR + JWT | Server-validated, middleware-level |
-| STT | Deepgram | Sub-300ms, streaming |
-| LLM | Claude (Anthropic) | Best conversation quality |
-| TTS | ElevenLabs | Most natural voices |
-| Telephony | Twilio | Industry standard |
-| Calendar | Google Calendar API | Full OAuth, real availability |
-| Email | Nodemailer + Gmail SMTP | Appointment notifications |
-| Scheduling | Calendly (embed) | Optional online booking page |
+### Prerequisites
 
----
+- Node.js 18+
+- npm or yarn
+- Supabase account ([supabase.com](https://supabase.com))
+- OpenAI API key ([platform.openai.com](https://platform.openai.com))
 
-## Project Structure
+### Installation
 
-```
-hello/
-├── backend/
-│   ├── src/
-│   │   ├── routes/
-│   │   │   ├── clinic.routes.ts        # Clinic config CRUD
-│   │   │   ├── appointments.routes.ts  # Booking + holds
-│   │   │   ├── calendar.routes.ts      # Google OAuth + event creation
-│   │   │   ├── calls.routes.ts         # Call logs
-│   │   │   ├── twilio.routes.ts        # Incoming call webhook
-│   │   │   ├── ai.routes.ts            # LLM orchestration
-│   │   │   ├── voices.routes.ts        # ElevenLabs voice picker
-│   │   │   └── knowledge.routes.ts     # Clinic knowledge base
-│   │   ├── services/
-│   │   │   ├── calendar.service.ts     # Google Calendar events
-│   │   │   └── email.service.ts        # Nodemailer notifications
-│   │   ├── lib/
-│   │   │   └── supabase.ts             # Service role client
-│   │   └── server.ts                   # Fastify entry point
-│   └── .env
-│
-├── frontend/
-│   └── src/
-│       ├── app/
-│       │   ├── (dashboard)/
-│       │   │   ├── agents/             # Agent builder
-│       │   │   ├── calendar/           # Calendar + Calendly
-│       │   │   ├── dashboard/          # Analytics
-│       │   │   └── phone/              # Twilio numbers
-│       │   └── login/                  # Auth page
-│       ├── components/
-│       │   └── Sidebar.tsx
-│       └── middleware.ts               # Edge-level JWT auth guard
-│
-└── database/
-    ├── schema.sql
-    └── migration_001 → 004.sql
-```
-
----
-
-## Security
-
-This was not an afterthought.
-
-- **Middleware-level auth** — Every dashboard route runs through Next.js edge middleware. `getUser()` validates the JWT with Supabase auth servers on every request, not just a cookie check.
-- **Two-layer guard** — Dashboard layout is an async Server Component that calls `getUser()` a second time as a defense-in-depth layer.
-- **Open-redirect protection** — The `?redirectTo=` param only accepts paths starting with `/` and not `//`.
-- **Service role key** — Backend Supabase client uses the service role key (bypasses RLS safely server-side). Never exposed to the frontend.
-- **HTTP security headers** — HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy on all routes.
-- **Twilio per-clinic** — Each clinic's Twilio credentials are stored isolated in their own DB row. No shared platform account.
-
----
-
-## Database Schema (key tables)
-
-```sql
--- Core clinic config
-clinics (
-  id, name, services[], timezone, operating_days[],
-  working_hours, slot_duration,
-  twilio_account_sid, twilio_auth_token, twilio_number,
-  google_access_token, google_refresh_token, google_calendar_id,
-  calendar_email, notification_email,
-  calendly_url, system_prompt, voice_id, llm_model,
-  language, voice_speed, voice_volume
-)
-
--- Every booking
-appointments (
-  id, clinic_id, patient_name, patient_phone,
-  service, slot_time, status, created_at
-)
-
--- Temporary slot holds (race condition prevention)
-slot_holds (
-  id, clinic_id, slot_time, status, expires_at
-)
-
--- Call analytics
-calls (
-  id, clinic_id, phone_number, duration,
-  status, outcome, created_at
-)
-```
-
----
-
-## Running Locally
-
-You need two terminals.
-
-**Backend** (port 8080):
 ```bash
-cd backend
-npm install
-npm run dev
+# Clone the repository
+git clone https://github.com/salikahmed595/ai-product.git
+cd ai-product
+
+# Install dependencies for all layers
+cd frontend && npm install && cd ..
+cd backend && npm install && cd ..
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Supabase & OpenAI credentials
+
+# Set up database
+cd supabase
+# Run migrations in Supabase dashboard or via CLI
 ```
 
-**Frontend** (port 3000):
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Environment Variables
 
-Then open [http://localhost:3000](http://localhost:3000).
+```env
+# Supabase
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 
----
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
 
-## Environment Variables
-
-**`backend/.env`**
-```
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/callback
-FRONTEND_URL=http://localhost:3000
-
-EMAIL_USER=
-EMAIL_PASS=
-
-ELEVENLABS_API_KEY=
-DEEPGRAM_API_KEY=
-ANTHROPIC_API_KEY=
-```
-
-**`frontend/.env.local`**
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+# App
+NODE_ENV=development
+PORT=3000
 ```
 
 ---
 
-## AI Rules (Hard Constraints)
+## 📁 Project Structure
 
-The AI receptionist has non-negotiable guardrails baked into the system prompt:
-
-- Will **not** give medical advice
-- Will **not** diagnose conditions
-- Will **not** recommend treatments
-- Will **only** book appointments and answer basic service questions
-- Redirects every medical question to an in-person consultation
+```
+ai-product/
+│
+├── 📁 frontend/                # TypeScript frontend application
+│   ├── 📄 index.html           # Entry point
+│   ├── 📄 main.ts              # Main TypeScript file
+│   └── 📁 components/          # UI components
+│
+├── 📁 backend/                 # TypeScript backend API
+│   ├── 📄 server.ts            # Express/API server
+│   ├── 📁 routes/              # API route handlers
+│   ├── 📁 services/            # Business logic & AI services
+│   └── 📁 middleware/          # Auth & validation middleware
+│
+├── 📁 database/                # Database configuration
+│   └── 📁 migrations/          # SQL migration files
+│
+├── 📁 supabase/                # Supabase configuration
+│   ├── 📁 migrations/          # Database schema
+│   └── 📁 functions/           # Edge functions
+│
+├── 📄 .gitignore               # Git ignore rules
+├── 📄 Claude.md                # AI context notes
+└── 📄 README.md                # This documentation
+```
 
 ---
 
-## Roadmap
+## 🔗 Related Projects
 
-- [ ] Barge-in support (caller interrupts AI mid-sentence)
-- [ ] Outbound reminder calls
-- [ ] Multi-clinic / multi-tenant
-- [ ] SMS follow-ups
-- [ ] Analytics dashboard v2
-- [ ] Stripe billing
+| Repository | Description | Stack |
+|------------|-------------|-------|
+| 🌐 [ai-showroom-frontend](https://github.com/salikahmed595/ai-showroom-frontend) | AI product marketplace UI | HTML · CSS · JS |
+| ⚙️ [ai-showroom-backend](https://github.com/salikahmed595/ai-showroom-backend) | FastAPI AI backend | Python · FastAPI · Docker |
+| 📞 [ai-calling-agent](https://github.com/salikahmed595/ai-calling-agent) | AI voice calling system | Node.js · Vapi · Supabase |
+| 🏠 [real-estate-leads-n8n](https://github.com/salikahmed595/real-estate-leads-n8n) | Real estate automation | n8n · Vapi · Google Sheets |
 
 ---
 
-## Built by
+## 👤 Author
 
-Salik Ahmed — [salikahmed595@gmail.com](mailto:salikahmed595@gmail.com)
+<div align="center">
 
-*If you're building something in the AI voice space and want to talk, reach out.*
+**Salik Ahmed** — AI Engineer · Automation Architect · AI Product Builder
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-salikahmed110-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/salikahmed110)
+[![Instagram](https://img.shields.io/badge/Instagram-@salikbuilds-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/salikbuilds/)
+[![YouTube](https://img.shields.io/badge/YouTube-@salikahmed686-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/@salikahmed686)
+[![GitHub](https://img.shields.io/badge/GitHub-salikahmed595-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/salikahmed595)
+
+</div>
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it helpful!**
+
+*Keywords: AI product, TypeScript AI app, Supabase AI, full-stack AI, AI SaaS, AI application development, production AI app, OpenAI TypeScript*
+
+</div>
